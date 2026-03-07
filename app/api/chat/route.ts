@@ -43,25 +43,28 @@ Nunca digas "no puedo ayudarte con eso" — siempre re-encuadra hacia algo útil
 }
 
 export async function POST(req: Request) {
+  console.log('[v0] Chat API called')
   try {
     const { messages, user } = await req.json()
+    console.log('[v0] Messages:', messages?.length, 'User:', user?.name)
 
-    // Build messages array in the correct format for generateText
     const formattedMessages = messages.map((m: { role: string; content: string }) => ({
       role: m.role as 'user' | 'assistant',
       content: m.content,
     }))
 
+    console.log('[v0] Calling generateText with openai/gpt-4o-mini')
     const result = await generateText({
-      model: 'anthropic/claude-sonnet-4-20250514',
+      model: 'openai/gpt-4o-mini',
       system: getSystemPrompt(user),
       messages: formattedMessages,
       maxOutputTokens: 500,
     })
 
+    console.log('[v0] Success, response length:', result.text?.length)
     return Response.json({ message: result.text })
   } catch (error) {
-    console.error('Chat API error:', error)
+    console.error('[v0] Chat API error:', error)
     return Response.json(
       { message: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.' },
       { status: 500 }
