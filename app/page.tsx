@@ -426,19 +426,20 @@ function PointsAnimationOverlay({ animations, onComplete }: { animations: Points
   )
 }
 
-// Confetti Component
+// Confetti Component - Lightweight version with CSS-only animation
 function Confetti() {
+  const pieces = [10, 25, 40, 55, 70, 85, 15, 35, 60, 80] // Fixed positions
   return (
     <div className="fixed inset-0 pointer-events-none z-[9997] overflow-hidden">
-      {Array.from({ length: 50 }).map((_, i) => (
+      {pieces.map((left, i) => (
         <div
           key={i}
-          className="absolute w-3 h-3 animate-confetti"
+          className="absolute w-2.5 h-2.5 animate-confetti"
           style={{
-            left: `${Math.random() * 100}%`,
+            left: `${left}%`,
             backgroundColor: ['#D63F74', '#9B72CF', '#F4A261', '#2DBD96', '#5B9BD5'][i % 5],
-            borderRadius: Math.random() > 0.5 ? '50%' : '0',
-            animationDelay: `${Math.random() * 0.5}s`,
+            borderRadius: i % 2 === 0 ? '50%' : '0',
+            animationDelay: `${i * 0.05}s`,
           }}
         />
       ))}
@@ -599,11 +600,11 @@ function AuthModal({ isOpen, onClose, defaultTab = 'register' }: { isOpen: boole
       {showConfetti && <Confetti />}
       <div 
         className="fixed inset-0 z-[100] flex items-center justify-center p-4"
-        style={{ background: 'rgba(28,14,26,0.55)', backdropFilter: 'blur(12px)' }}
+        style={{ background: 'rgba(28,14,26,0.7)' }}
       >
         <div 
-          className="relative w-full max-w-[520px] md:max-w-[900px] bg-white rounded-[32px] overflow-hidden animate-slideUp"
-          style={{ border: '2px solid #EDD9EA', boxShadow: '0 32px 80px rgba(214,63,116,0.18)' }}
+          className="relative w-full max-w-[520px] md:max-w-[900px] bg-white rounded-[28px] overflow-hidden animate-fadeIn"
+          style={{ border: '1.5px solid #EDD9EA', boxShadow: '0 16px 48px rgba(214,63,116,0.12)' }}
         >
           {/* Close button */}
           <button
@@ -630,11 +631,6 @@ function AuthModal({ isOpen, onClose, defaultTab = 'register' }: { isOpen: boole
             <div className="flex flex-col md:flex-row">
               {/* Left Panel (Desktop only) */}
               <div className="hidden md:flex md:w-[45%] gradient-signature p-8 flex-col justify-between relative overflow-hidden">
-                {/* Decorative elements */}
-                <div className="absolute top-10 right-10 w-20 h-20 rounded-full bg-white/10 animate-float" />
-                <div className="absolute bottom-20 left-10 w-16 h-16 rounded-full bg-white/10 animate-float animation-delay-200" />
-                <div className="absolute top-1/2 right-20 w-4 h-4 bg-white/30 rotate-45 animate-pulse-soft" />
-                
                 <div>
                   <h2 className="font-serif text-3xl font-black text-white italic mb-8">
                     Tu viaje financiero empieza aquí 💜
@@ -1092,21 +1088,17 @@ function Navigation({
   )
 }
 
-// Background Blobs
+// Background Blobs - Static version for better performance
 function BackgroundBlobs() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
       <div 
-        className="absolute -top-32 -right-32 w-[600px] h-[600px] opacity-35 animate-blob"
-        style={{ background: 'linear-gradient(135deg, #FDE8F0 0%, #F2789F 100%)' }}
+        className="absolute -top-32 -right-32 w-[500px] h-[500px] opacity-25 rounded-full"
+        style={{ background: 'radial-gradient(circle, #FDE8F0 0%, transparent 70%)' }}
       />
       <div 
-        className="absolute bottom-20 -left-40 w-[500px] h-[500px] opacity-35 animate-blob animation-delay-200"
-        style={{ background: 'linear-gradient(135deg, #F0E8FD 0%, #C4A8E8 100%)' }}
-      />
-      <div 
-        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] opacity-30 animate-blob animation-delay-400"
-        style={{ background: 'linear-gradient(135deg, #FEF0E4 0%, #F4A261 100%)' }}
+        className="absolute bottom-20 -left-40 w-[400px] h-[400px] opacity-25 rounded-full"
+        style={{ background: 'radial-gradient(circle, #F0E8FD 0%, transparent 70%)' }}
       />
     </div>
   )
@@ -1116,7 +1108,7 @@ function BackgroundBlobs() {
 function AuthGuard({ message, onAuthClick }: { message: string; onAuthClick: () => void }) {
   return (
     <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[28px] overflow-hidden">
-      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" />
+      <div className="absolute inset-0 bg-white/90" />
       <div className="relative text-center p-6">
         <p className="text-[#6B3F5E] mb-4">{message}</p>
         <button onClick={onAuthClick} className="btn-gradient px-6 py-3 text-sm">
@@ -1712,7 +1704,7 @@ function AprendePage({
 
       {/* Video Modal */}
       {videoModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1C0E1A]/60 backdrop-blur-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1C0E1A]/75">
           <div 
             className="w-full max-w-[720px] rounded-[28px] overflow-hidden animate-fadeUp"
             style={{ 
@@ -3154,23 +3146,20 @@ function AppContent() {
       
       {/* Level-Up Celebration Overlay */}
       {levelUpOverlay && (
-        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#1C0E1A]/80 backdrop-blur-sm">
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#1C0E1A]/85">
           <Confetti />
-          <div className="text-center animate-fadeUp">
+          <div className="text-center animate-fadeIn">
             <div 
-              className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center text-6xl animate-pulse-soft"
-              style={{ background: `var(--${levelUpOverlay.level.color})` }}
+              className="w-28 h-28 mx-auto mb-5 rounded-full flex items-center justify-center text-5xl"
+              style={{ background: getColorClasses(levelUpOverlay.level.color).hex }}
             >
               {levelUpOverlay.level.emoji}
             </div>
-            <h2 className="font-serif text-4xl font-black text-white mb-3">
-              {'\u00A1'}Subiste de nivel!
+            <h2 className="font-serif text-3xl font-black text-white mb-2">
+              Subiste de nivel!
             </h2>
-            <p className="text-2xl text-white/90 font-semibold mb-2">
-              Nivel {levelUpOverlay.level.id}: {levelUpOverlay.level.emoji} {levelUpOverlay.level.name}
-            </p>
-            <p className="text-white/70">
-              {'\u00A1'}Sigue aprendiendo para alcanzar nuevas metas!
+            <p className="text-xl text-white/90 font-semibold">
+              Nivel {levelUpOverlay.level.id}: {levelUpOverlay.level.name}
             </p>
           </div>
         </div>
