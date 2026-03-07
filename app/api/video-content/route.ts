@@ -9,7 +9,7 @@ export async function POST(req: Request) {
       : 'Usa un tono profesional pero cálido, directo y claro.'
 
     const result = await generateText({
-      model: 'anthropic/claude-sonnet-4-20250514',
+      model: 'openai/gpt-4o-mini',
       system: `Eres Femi de FinFémina. Creas contenido educativo financiero para mujeres peruanas jóvenes (18–28). Tu estilo es: cálido, empoderador, sin tecnicismos, con ejemplos de la vida real peruana (menciona soles, Yape, Wong, BCP, etc.). ${modeInstruction}
 
 RESPONDE ÚNICAMENTE con un JSON válido, sin texto adicional, sin backticks, con esta estructura exacta:
