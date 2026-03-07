@@ -1712,10 +1712,16 @@ function AprendePage({
 
       {/* Video Modal */}
       {videoModal.isOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-[#1C0E1A]/60 backdrop-blur-sm">
           <div 
-            className="w-full max-w-3xl rounded-[28px] overflow-hidden animate-fadeUp"
-            style={{ background: '#1C0E1A', border: '1.5px solid transparent', backgroundClip: 'padding-box' }}
+            className="w-full max-w-[720px] rounded-[28px] overflow-hidden animate-fadeUp"
+            style={{ 
+              background: '#1C0E1A', 
+              border: '2px solid transparent',
+              backgroundImage: 'linear-gradient(#1C0E1A, #1C0E1A), linear-gradient(135deg, #D63F74, #9B72CF)',
+              backgroundOrigin: 'border-box',
+              backgroundClip: 'padding-box, border-box'
+            }}
           >
             {/* Video Area */}
             <div className="relative h-[300px] md:h-[400px] flex items-center justify-center overflow-hidden">
@@ -2738,21 +2744,21 @@ function AIChatWidget({ onAuthClick, activeTab }: { onAuthClick: () => void; act
   const messagesEndRef = useRef<HTMLDivElement>(null)
   const maxChars = 200
 
-  // Contextual suggestions based on active tab
+  // Contextual suggestions based on active tab (4 chips per page)
   const getSuggestions = () => {
     switch (activeTab) {
       case 'inicio':
-        return ['¿Por dónde empiezo?', '¿Qué es el interés compuesto?', '¿Cómo abro mi primera cuenta?']
+        return ['¿Por dónde empiezo?', '¿Qué es el interés compuesto?', '¿Cómo abro mi primera cuenta?', '¿Cuánto debo ahorrar?']
       case 'tracker':
-        return ['¿Estoy gastando bien este mes?', '¿Cómo puedo ahorrar más?', 'Analiza mis gastos']
+        return ['¿Estoy gastando bien?', '¿Cómo puedo ahorrar más?', 'Analiza mis gastos', '¿Cuál es mi meta ideal?']
       case 'comparar':
-        return ['¿Qué tarjeta me conviene?', '¿Cuál banco es mejor para mí?', '¿Qué es la TEA?']
+        return ['¿Qué tarjeta me conviene?', '¿Cuál banco es mejor?', '¿Qué es la TEA?', '¿Qué significa TCEA?']
       case 'aprende':
-        return ['Explícame más sobre este tema', '¿Cuál video veo primero?']
+        return ['¿Cuál video veo primero?', 'Explícame más sobre este tema', '¿Qué tema es más importante?', '¿Cómo empiezo a invertir?']
       case 'logros':
-        return ['¿Cómo obtengo mi Pasaporte?', '¿Qué nivel sigue?']
+        return ['¿Cómo obtengo mi Pasaporte?', '¿Qué nivel sigue?', '¿Cómo gano más puntos?', '¿Qué desbloqueo después?']
       default:
-        return ['¿Cómo empiezo a ahorrar?', '¿Qué es un ETF?']
+        return ['¿Cómo empiezo a ahorrar?', '¿Qué es un ETF?', '¿Cuánto debo tener de fondo?', '¿Cómo hago presupuesto?']
     }
   }
 
@@ -2881,7 +2887,7 @@ function AIChatWidget({ onAuthClick, activeTab }: { onAuthClick: () => void; act
               🤖
             </div>
             <div className="flex-1">
-              <div className="font-bold text-white">Femi</div>
+              <div className="font-bold text-white">Femi — FinFémina</div>
               <div className="flex items-center gap-1 text-white/80 text-sm">
                 <span className="w-2 h-2 rounded-full bg-[#2DBD96] animate-blink" />
                 En línea 24/7
