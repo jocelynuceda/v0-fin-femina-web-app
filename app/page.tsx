@@ -1088,17 +1088,21 @@ function Navigation({
   )
 }
 
-// Background Blobs - Static version for better performance
+// Background Blobs
 function BackgroundBlobs() {
   return (
     <div className="fixed inset-0 overflow-hidden pointer-events-none z-0">
       <div 
-        className="absolute -top-32 -right-32 w-[500px] h-[500px] opacity-25 rounded-full"
-        style={{ background: 'radial-gradient(circle, #FDE8F0 0%, transparent 70%)' }}
+        className="absolute -top-32 -right-32 w-[600px] h-[600px] opacity-35 animate-blob"
+        style={{ background: 'linear-gradient(135deg, #FDE8F0 0%, #F2789F 100%)' }}
       />
       <div 
-        className="absolute bottom-20 -left-40 w-[400px] h-[400px] opacity-25 rounded-full"
-        style={{ background: 'radial-gradient(circle, #F0E8FD 0%, transparent 70%)' }}
+        className="absolute bottom-20 -left-40 w-[500px] h-[500px] opacity-35 animate-blob animation-delay-200"
+        style={{ background: 'linear-gradient(135deg, #F0E8FD 0%, #C4A8E8 100%)' }}
+      />
+      <div 
+        className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] opacity-30 animate-blob animation-delay-400"
+        style={{ background: 'linear-gradient(135deg, #FEF0E4 0%, #F4A261 100%)' }}
       />
     </div>
   )
