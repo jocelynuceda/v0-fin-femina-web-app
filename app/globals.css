@@ -1,0 +1,267 @@
+@import 'tailwindcss';
+@import 'tw-animate-css';
+
+@custom-variant dark (&:is(.dark *));
+
+:root {
+  /* FinFémina Design System */
+  --rose: #E8436A;
+  --rose-light: #FEE7ED;
+  --peach: #FF8C5A;
+  --peach-light: #FFEEE6;
+  --amber: #F5A623;
+  --amber-light: #FEF3DB;
+  --mint: #1DB985;
+  --mint-light: #E6F9F2;
+  --sky: #4A90D9;
+  --sky-light: #E6F0FA;
+  --lavender: #8B5CF6;
+  --lavender-light: #F0EBFE;
+  --cream: #FEF6F0;
+  --ink: #1A0A0E;
+  --muted-text: #9E7A82;
+  --border-color: #F0DCE4;
+  
+  --background: #FEF6F0;
+  --foreground: #1A0A0E;
+  --card: #FFFFFF;
+  --card-foreground: #1A0A0E;
+  --popover: #FFFFFF;
+  --popover-foreground: #1A0A0E;
+  --primary: #E8436A;
+  --primary-foreground: #FFFFFF;
+  --secondary: #FF8C5A;
+  --secondary-foreground: #FFFFFF;
+  --muted: #FEF6F0;
+  --muted-foreground: #9E7A82;
+  --accent: #F5A623;
+  --accent-foreground: #1A0A0E;
+  --destructive: #E8436A;
+  --destructive-foreground: #FFFFFF;
+  --border: #F0DCE4;
+  --input: #FEF6F0;
+  --ring: #E8436A;
+  --radius: 0.875rem;
+}
+
+@theme inline {
+  --font-sans: var(--font-nunito), 'Nunito', system-ui, sans-serif;
+  --font-serif: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  --font-mono: 'Geist Mono', monospace;
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-foreground: var(--destructive-foreground);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --radius-sm: calc(var(--radius) - 4px);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) + 4px);
+}
+
+/* Keyframe Animations */
+@keyframes fadeUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-20px) rotate(3deg);
+  }
+}
+
+@keyframes pulse-soft {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.9;
+  }
+}
+
+@keyframes bounce-dots {
+  0%, 80%, 100% {
+    transform: scale(0);
+  }
+  40% {
+    transform: scale(1);
+  }
+}
+
+@keyframes blink {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.4;
+  }
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(100%);
+  }
+}
+
+@keyframes blob-morph {
+  0%, 100% {
+    border-radius: 40% 60% 70% 30% / 40% 50% 60% 50%;
+  }
+  25% {
+    border-radius: 50% 60% 40% 70% / 60% 40% 60% 50%;
+  }
+  50% {
+    border-radius: 60% 40% 50% 60% / 50% 60% 40% 60%;
+  }
+  75% {
+    border-radius: 70% 50% 60% 40% / 40% 70% 50% 60%;
+  }
+}
+
+.animate-fadeUp {
+  animation: fadeUp 0.6s ease-out forwards;
+}
+
+.animate-float {
+  animation: float 6s ease-in-out infinite;
+}
+
+.animate-pulse-soft {
+  animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-blink {
+  animation: blink 1.5s ease-in-out infinite;
+}
+
+.animate-slideIn {
+  animation: slideIn 0.3s ease-out forwards;
+}
+
+.animate-slideOut {
+  animation: slideOut 0.3s ease-out forwards;
+}
+
+.animate-blob {
+  animation: blob-morph 8s ease-in-out infinite, float 10s ease-in-out infinite;
+}
+
+.animation-delay-100 { animation-delay: 100ms; }
+.animation-delay-200 { animation-delay: 200ms; }
+.animation-delay-300 { animation-delay: 300ms; }
+.animation-delay-400 { animation-delay: 400ms; }
+.animation-delay-500 { animation-delay: 500ms; }
+
+/* Gradient Text */
+.gradient-text {
+  background: linear-gradient(135deg, #E8436A 0%, #FF8C5A 50%, #F5A623 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+/* Primary Gradient Button */
+.btn-gradient {
+  background: linear-gradient(135deg, #E8436A 0%, #FF8C5A 100%);
+  color: white;
+  border-radius: 16px;
+  font-weight: 700;
+  transition: all 0.3s ease;
+}
+
+.btn-gradient:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 24px rgba(232, 67, 106, 0.35);
+}
+
+/* Card Styles */
+.card-finfemina {
+  background: white;
+  border-radius: 24px;
+  border: 1.5px solid #F0DCE4;
+  box-shadow: 0 4px 24px rgba(232, 67, 106, 0.10);
+  transition: all 0.3s ease;
+}
+
+.card-finfemina:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 32px rgba(232, 67, 106, 0.18);
+}
+
+/* Glassmorphism Navbar */
+.glass-nav {
+  background: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(20px);
+  -webkit-backdrop-filter: blur(20px);
+}
+
+/* Custom Scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+  height: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--cream);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--rose-light);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--rose);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+    font-family: var(--font-sans);
+  }
+}
