@@ -900,9 +900,8 @@ function AuthModal({ isOpen, onClose, defaultTab = 'register' }: { isOpen: boole
 
                     {/* Demo credentials */}
                     <div className="p-4 rounded-xl bg-[#E4F7F1] border border-[#2DBD96]">
-                      <p className="text-sm font-bold text-[#1C0E1A] mb-1">Cuenta de demostración:</p>
-                      <p className="text-sm text-[#6B3F5E]">📧 demo@finfemina.pe</p>
-                      <p className="text-sm text-[#6B3F5E]">🔒 demo1234</p>
+                      <p className="text-sm font-bold text-[#1C0E1A] mb-1">Cuenta demo:</p>
+                      <p className="text-sm text-[#6B3F5E]">demo@finfemina.pe / demo1234</p>
                     </div>
                   </div>
                 )}
@@ -1175,7 +1174,7 @@ function TourOverlay({ step, onNext, onSkip }: { step: number; onNext: () => voi
 }
 
 // ============ INICIO PAGE ============
-function InicioPage({ onAuthClick, setActiveTab }: { onAuthClick: () => void; setActiveTab: (tab: Tab) => void }) {
+function InicioPage({ onAuthClick, setActiveTab, onStartTour }: { onAuthClick: () => void; setActiveTab: (tab: Tab) => void; onStartTour: () => void }) {
   const [mode, setMode] = useState<Mode>('claro')
   const { state } = useAuth()
 
@@ -1200,7 +1199,7 @@ function InicioPage({ onAuthClick, setActiveTab }: { onAuthClick: () => void; se
 
   const handleDemoClick = () => {
     if (state.isAuthenticated) {
-      // Start tour
+      onStartTour()
     } else {
       onAuthClick()
     }
@@ -3090,7 +3089,7 @@ function AppContent() {
       />
       
       <div className="relative z-10">
-        {activeTab === 'inicio' && <InicioPage onAuthClick={() => openAuthModal('register')} setActiveTab={setActiveTab} />}
+        {activeTab === 'inicio' && <InicioPage onAuthClick={() => openAuthModal('register')} setActiveTab={setActiveTab} onStartTour={() => setTourStep(0)} />}
         {activeTab === 'aprende' && (
           <AprendePage 
             onAuthClick={() => openAuthModal('register')} 
