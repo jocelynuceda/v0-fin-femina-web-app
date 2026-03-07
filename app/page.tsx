@@ -247,7 +247,7 @@ const LEVELS = [
   { id: 2, name: 'Organizadora de dinero', emoji: '💸', color: 'sky', points: 500 },
   { id: 3, name: 'Mujer financiera', emoji: '📊', color: 'lilac', points: 1500 },
   { id: 4, name: 'Inversionista principiante', emoji: '📈', color: 'peach', points: 3000 },
-  { id: 5, name: 'Líder financiera', emoji: '👑', color: 'rose', points: 5000 },
+  { id: 5, name: 'Líder financiera', emoji: '👑', color: 'rose', points: 6000 },
 ]
 
 const BADGES = [
@@ -378,12 +378,12 @@ function ToastContainer() {
       case 'success': return { border: 'border-l-[#2DBD96]', icon: '✅' }
       case 'error': return { border: 'border-l-[#D63F74]', icon: '❌' }
       case 'info': return { border: 'border-l-[#9B72CF]', icon: '💜' }
-      case 'warning': return { border: 'border-l-[#F4A261]', icon: '⚠️' }
+      case 'warning': return { border: 'border-l-[#E9A23B]', icon: '⚠️' }
     }
   }
 
   return (
-    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3">
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-2.5">
       {toasts.map((toast) => {
         const styles = getToastStyles(toast.type)
         return (
@@ -3070,6 +3070,15 @@ function AppContent() {
     setAuthModalOpen(true)
   }
 
+  const [levelUpOverlay, setLevelUpOverlay] = useState<{ level: typeof LEVELS[0] } | null>(null)
+
+  const getLevelFromPoints = (pts: number) => {
+    for (let i = LEVELS.length - 1; i >= 0; i--) {
+      if (pts >= LEVELS[i].points) return LEVELS[i]
+    }
+    return LEVELS[0]
+  }
+
   const handleEarnPoints = (amount: number, x: number, y: number) => {
     if (!state.user) return
     
@@ -3077,8 +3086,18 @@ function AppContent() {
     const id = Date.now().toString()
     setPointsAnimations(prev => [...prev, { id, amount, x, y }])
     
+    const newPoints = state.user.points + amount
+    const oldLevel = getLevelFromPoints(state.user.points)
+    const newLevel = getLevelFromPoints(newPoints)
+    
+    // Check for level up
+    if (newLevel.id > oldLevel.id) {
+      setLevelUpOverlay({ level: newLevel })
+      setTimeout(() => setLevelUpOverlay(null), 3500)
+    }
+    
     // Update points
-    updatePoints(state.user.points + amount)
+    updatePoints(newPoints)
   }
 
   const removePointsAnimation = (id: string) => {
@@ -3132,6 +3151,30 @@ function AppContent() {
 
       <ToastContainer />
       <PointsAnimationOverlay animations={pointsAnimations} onComplete={removePointsAnimation} />
+      
+      {/* Level-Up Celebration Overlay */}
+      {levelUpOverlay && (
+        <div className="fixed inset-0 z-[10000] flex items-center justify-center bg-[#1C0E1A]/80 backdrop-blur-sm">
+          <Confetti />
+          <div className="text-center animate-fadeUp">
+            <div 
+              className="w-32 h-32 mx-auto mb-6 rounded-full flex items-center justify-center text-6xl animate-pulse-soft"
+              style={{ background: `var(--${levelUpOverlay.level.color})` }}
+            >
+              {levelUpOverlay.level.emoji}
+            </div>
+            <h2 className="font-serif text-4xl font-black text-white mb-3">
+              {'\u00A1'}Subiste de nivel!
+            </h2>
+            <p className="text-2xl text-white/90 font-semibold mb-2">
+              Nivel {levelUpOverlay.level.id}: {levelUpOverlay.level.emoji} {levelUpOverlay.level.name}
+            </p>
+            <p className="text-white/70">
+              {'\u00A1'}Sigue aprendiendo para alcanzar nuevas metas!
+            </p>
+          </div>
+        </div>
+      )}
     </main>
   )
 }
