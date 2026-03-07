@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef, useCallback } from 'react'
+import { useState, useEffect, useRef, useCallback, createContext, useContext, useReducer, type ReactNode } from 'react'
 
 // ============ TYPES ============
 type Tab = 'inicio' | 'aprende' | 'tracker' | 'comparar' | 'logros'
@@ -11,10 +11,38 @@ type CompareTab = 'tarjetas' | 'cuentas'
 type CompareSubTab = 'credito' | 'debito' | 'ahorro' | 'sueldo' | 'cts'
 type CreditLevel = 'basico' | 'intermedio' | 'premium' | 'exclusivo'
 type ChartType = 'barras' | 'circular' | 'tendencia' | 'arbol'
+type ToastType = 'success' | 'error' | 'info' | 'warning'
+type Occupation = 'estudiante' | 'trabajando' | 'freelancer'
+
+interface User {
+  id: string
+  name: string
+  email: string
+  avatar: string | null
+  level: number
+  points: number
+  createdAt: string
+  mode: Mode
+  occupation: Occupation
+  age: number
+}
+
+interface AuthState {
+  isAuthenticated: boolean
+  user: User | null
+  isLoading: boolean
+}
+
+type AuthAction = 
+  | { type: 'LOGIN'; payload: User }
+  | { type: 'LOGOUT' }
+  | { type: 'UPDATE_USER'; payload: Partial<User> }
+  | { type: 'SET_LOADING'; payload: boolean }
 
 interface ChatMessage {
   role: 'user' | 'assistant'
   content: string
+  timestamp?: string
 }
 
 interface Transaction {
@@ -32,6 +60,144 @@ interface QuizState {
   answered: boolean
   selectedAnswer: number | null
   correctAnswer: number
+}
+
+interface Toast {
+  id: string
+  type: ToastType
+  message: string
+}
+
+interface VideoContent {
+  title: string
+  duration: string
+  slides: {
+    emoji: string
+    headline: string
+    body: string
+    tip: string
+  }[]
+  keyTakeaway: string
+  relatedTopics: string[]
+}
+
+interface PointsAnimation {
+  id: string
+  amount: number
+  x: number
+  y: number
+}
+
+// ============ AUTH CONTEXT ============
+const AuthContext = createContext<{
+  state: AuthState
+  dispatch: React.Dispatch<AuthAction>
+  login: (user: User) => void
+  logout: () => void
+  updatePoints: (points: number) => void
+} | null>(null)
+
+function authReducer(state: AuthState, action: AuthAction): AuthState {
+  switch (action.type) {
+    case 'LOGIN':
+      return { isAuthenticated: true, user: action.payload, isLoading: false }
+    case 'LOGOUT':
+      return { isAuthenticated: false, user: null, isLoading: false }
+    case 'UPDATE_USER':
+      return state.user ? { ...state, user: { ...state.user, ...action.payload } } : state
+    case 'SET_LOADING':
+      return { ...state, isLoading: action.payload }
+    default:
+      return state
+  }
+}
+
+function AuthProvider({ children }: { children: ReactNode }) {
+  const [state, dispatch] = useReducer(authReducer, {
+    isAuthenticated: false,
+    user: null,
+    isLoading: true,
+  })
+
+  // Rehydrate from localStorage
+  useEffect(() => {
+    const stored = localStorage.getItem('finfemina_user')
+    if (stored) {
+      try {
+        const user = JSON.parse(stored)
+        dispatch({ type: 'LOGIN', payload: user })
+      } catch {
+        dispatch({ type: 'SET_LOADING', payload: false })
+      }
+    } else {
+      dispatch({ type: 'SET_LOADING', payload: false })
+    }
+  }, [])
+
+  const login = useCallback((user: User) => {
+    localStorage.setItem('finfemina_user', JSON.stringify(user))
+    dispatch({ type: 'LOGIN', payload: user })
+  }, [])
+
+  const logout = useCallback(() => {
+    localStorage.removeItem('finfemina_user')
+    dispatch({ type: 'LOGOUT' })
+  }, [])
+
+  const updatePoints = useCallback((points: number) => {
+    dispatch({ type: 'UPDATE_USER', payload: { points } })
+    if (state.user) {
+      const updated = { ...state.user, points }
+      localStorage.setItem('finfemina_user', JSON.stringify(updated))
+    }
+  }, [state.user])
+
+  return (
+    <AuthContext.Provider value={{ state, dispatch, login, logout, updatePoints }}>
+      {children}
+    </AuthContext.Provider>
+  )
+}
+
+function useAuth() {
+  const context = useContext(AuthContext)
+  if (!context) throw new Error('useAuth must be used within AuthProvider')
+  return context
+}
+
+// ============ TOAST CONTEXT ============
+const ToastContext = createContext<{
+  toasts: Toast[]
+  addToast: (type: ToastType, message: string) => void
+  removeToast: (id: string) => void
+} | null>(null)
+
+function ToastProvider({ children }: { children: ReactNode }) {
+  const [toasts, setToasts] = useState<Toast[]>([])
+
+  const addToast = useCallback((type: ToastType, message: string) => {
+    const id = Date.now().toString()
+    setToasts(prev => [...prev, { id, type, message }])
+    setTimeout(() => {
+      setToasts(prev => prev.filter(t => t.id !== id))
+    }, 4000)
+  }, [])
+
+  const removeToast = useCallback((id: string) => {
+    setToasts(prev => prev.filter(t => t.id !== id))
+  }, [])
+
+  return (
+    <ToastContext.Provider value={{ toasts, addToast, removeToast }}>
+      {children}
+    </ToastContext.Provider>
+  )
+}
+
+function useToast() {
+  const context = useContext(ToastContext)
+  if (!context) throw new Error('useToast must be used within ToastProvider')
+  return context
 }
 
 // ============ DATA ============
@@ -203,6 +369,83 @@ const getColorClasses = (color: string) => {
 
 // ============ COMPONENTS ============
 
+// Toast Container
+function ToastContainer() {
+  const { toasts, removeToast } = useToast()
+  
+  const getToastStyles = (type: ToastType) => {
+    switch (type) {
+      case 'success': return { border: 'border-l-[#2DBD96]', icon: '✅' }
+      case 'error': return { border: 'border-l-[#D63F74]', icon: '❌' }
+      case 'info': return { border: 'border-l-[#9B72CF]', icon: '💜' }
+      case 'warning': return { border: 'border-l-[#F4A261]', icon: '⚠️' }
+    }
+  }
+
+  return (
+    <div className="fixed top-4 right-4 z-[9999] flex flex-col gap-3">
+      {toasts.map((toast) => {
+        const styles = getToastStyles(toast.type)
+        return (
+          <div
+            key={toast.id}
+            className={`w-80 bg-white rounded-2xl shadow-lg border-l-4 ${styles.border} p-4 animate-slideIn`}
+          >
+            <div className="flex items-center gap-3">
+              <span className="text-lg">{styles.icon}</span>
+              <p className="flex-1 text-sm text-[#1C0E1A]">{toast.message}</p>
+              <button onClick={() => removeToast(toast.id)} className="text-[#B08DA8] hover:text-[#D63F74]">
+                ✕
+              </button>
+            </div>
+            <div className="mt-2 h-1 bg-[#EDD9EA] rounded-full overflow-hidden">
+              <div className="h-full gradient-signature animate-shrink" />
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// Points Animation
+function PointsAnimationOverlay({ animations, onComplete }: { animations: PointsAnimation[], onComplete: (id: string) => void }) {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[9998]">
+      {animations.map((anim) => (
+        <div
+          key={anim.id}
+          className="absolute font-serif text-xl font-black gradient-signature-text animate-points-float"
+          style={{ left: anim.x, top: anim.y }}
+          onAnimationEnd={() => onComplete(anim.id)}
+        >
+          +{anim.amount} pts
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// Confetti Component
+function Confetti() {
+  return (
+    <div className="fixed inset-0 pointer-events-none z-[9997] overflow-hidden">
+      {Array.from({ length: 50 }).map((_, i) => (
+        <div
+          key={i}
+          className="absolute w-3 h-3 animate-confetti"
+          style={{
+            left: `${Math.random() * 100}%`,
+            backgroundColor: ['#D63F74', '#9B72CF', '#F4A261', '#2DBD96', '#5B9BD5'][i % 5],
+            borderRadius: Math.random() > 0.5 ? '50%' : '0',
+            animationDelay: `${Math.random() * 0.5}s`,
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
 // Logo Component
 function Logo() {
   return (
@@ -218,10 +461,541 @@ function Logo() {
   )
 }
 
+// Auth Modal
+function AuthModal({ isOpen, onClose, defaultTab = 'register' }: { isOpen: boolean; onClose: () => void; defaultTab?: 'register' | 'login' }) {
+  const [tab, setTab] = useState<'register' | 'login'>(defaultTab)
+  const [isLoading, setIsLoading] = useState(false)
+  const [showSuccess, setShowSuccess] = useState(false)
+  const [showConfetti, setShowConfetti] = useState(false)
+  const { login } = useAuth()
+  const { addToast } = useToast()
+
+  // Register form state
+  const [registerForm, setRegisterForm] = useState({
+    firstName: '',
+    email: '',
+    password: '',
+    age: '',
+    occupation: '' as Occupation | '',
+    mode: 'claro' as Mode,
+  })
+  const [registerErrors, setRegisterErrors] = useState<Record<string, string>>({})
+  const [passwordStrength, setPasswordStrength] = useState(0)
+
+  // Login form state
+  const [loginForm, setLoginForm] = useState({ email: '', password: '', remember: false })
+  const [loginErrors, setLoginErrors] = useState<Record<string, string>>({})
+  const [showPassword, setShowPassword] = useState(false)
+
+  const validateEmail = (email: string) => /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)
+  
+  const calculatePasswordStrength = (password: string) => {
+    let strength = 0
+    if (password.length >= 8) strength++
+    if (/[A-Z]/.test(password)) strength++
+    if (/[0-9]/.test(password)) strength++
+    if (/[^A-Za-z0-9]/.test(password)) strength++
+    return strength
+  }
+
+  const handlePasswordChange = (password: string) => {
+    setRegisterForm({ ...registerForm, password })
+    setPasswordStrength(calculatePasswordStrength(password))
+  }
+
+  const handleRegisterSubmit = async () => {
+    const errors: Record<string, string> = {}
+    if (!registerForm.firstName.trim()) errors.firstName = 'Ingresa tu nombre'
+    if (!validateEmail(registerForm.email)) errors.email = 'Ingresa un email válido'
+    if (registerForm.password.length < 8) errors.password = 'Mínimo 8 caracteres'
+    if (!registerForm.age || parseInt(registerForm.age) < 16 || parseInt(registerForm.age) > 35) errors.age = 'Edad entre 16 y 35'
+    if (!registerForm.occupation) errors.occupation = 'Selecciona una opción'
+
+    setRegisterErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    setIsLoading(true)
+    await new Promise(r => setTimeout(r, 1200))
+
+    const newUser: User = {
+      id: Date.now().toString(),
+      name: registerForm.firstName,
+      email: registerForm.email,
+      avatar: null,
+      level: 1,
+      points: 0,
+      createdAt: new Date().toISOString(),
+      mode: registerForm.mode,
+      occupation: registerForm.occupation as Occupation,
+      age: parseInt(registerForm.age),
+    }
+
+    setIsLoading(false)
+    setShowSuccess(true)
+    setShowConfetti(true)
+    
+    setTimeout(() => {
+      login(newUser)
+      addToast('success', `¡Bienvenida a FinFémina, ${newUser.name}! 🎉`)
+      onClose()
+      setShowSuccess(false)
+      setShowConfetti(false)
+    }, 2000)
+  }
+
+  const handleLoginSubmit = async () => {
+    const errors: Record<string, string> = {}
+    if (!validateEmail(loginForm.email)) errors.email = 'Ingresa un email válido'
+    if (!loginForm.password) errors.password = 'Ingresa tu contraseña'
+
+    setLoginErrors(errors)
+    if (Object.keys(errors).length > 0) return
+
+    setIsLoading(true)
+    await new Promise(r => setTimeout(r, 1200))
+
+    // Demo account check
+    if (loginForm.email === 'demo@finfemina.pe' && loginForm.password === 'demo1234') {
+      const demoUser: User = {
+        id: 'demo',
+        name: 'Valeria',
+        email: 'demo@finfemina.pe',
+        avatar: null,
+        level: 2,
+        points: 1240,
+        createdAt: '2024-01-01',
+        mode: 'cercano',
+        occupation: 'trabajando',
+        age: 24,
+      }
+      login(demoUser)
+      addToast('info', `¡Hola de nuevo, ${demoUser.name}! 💜`)
+      onClose()
+    } else {
+      // For demo, accept any valid-looking credentials
+      const user: User = {
+        id: Date.now().toString(),
+        name: loginForm.email.split('@')[0],
+        email: loginForm.email,
+        avatar: null,
+        level: 1,
+        points: 0,
+        createdAt: new Date().toISOString(),
+        mode: 'claro',
+        occupation: 'trabajando',
+        age: 25,
+      }
+      login(user)
+      addToast('info', `¡Hola de nuevo, ${user.name}! 💜`)
+      onClose()
+    }
+    setIsLoading(false)
+  }
+
+  if (!isOpen) return null
+
+  return (
+    <>
+      {showConfetti && <Confetti />}
+      <div 
+        className="fixed inset-0 z-[100] flex items-center justify-center p-4"
+        style={{ background: 'rgba(28,14,26,0.55)', backdropFilter: 'blur(12px)' }}
+      >
+        <div 
+          className="relative w-full max-w-[520px] md:max-w-[900px] bg-white rounded-[32px] overflow-hidden animate-slideUp"
+          style={{ border: '2px solid #EDD9EA', boxShadow: '0 32px 80px rgba(214,63,116,0.18)' }}
+        >
+          {/* Close button */}
+          <button
+            onClick={onClose}
+            className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-[#F0E8FD] text-[#9B72CF] flex items-center justify-center hover:bg-[#E0D4F7] transition-all"
+          >
+            ✕
+          </button>
+
+          {showSuccess ? (
+            // Success State
+            <div className="p-12 text-center">
+              <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-[#E4F7F1] flex items-center justify-center">
+                <svg className="w-12 h-12 text-[#2DBD96] animate-draw-check" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                  <path d="M5 13l4 4L19 7" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+              </div>
+              <h2 className="font-serif text-3xl font-black text-[#1C0E1A] mb-2">
+                ¡Bienvenida, {registerForm.firstName}! 🎉
+              </h2>
+              <p className="text-[#6B3F5E]">Tu cuenta ha sido creada. Prepárate para transformar tus finanzas.</p>
+            </div>
+          ) : (
+            <div className="flex flex-col md:flex-row">
+              {/* Left Panel (Desktop only) */}
+              <div className="hidden md:flex md:w-[45%] gradient-signature p-8 flex-col justify-between relative overflow-hidden">
+                {/* Decorative elements */}
+                <div className="absolute top-10 right-10 w-20 h-20 rounded-full bg-white/10 animate-float" />
+                <div className="absolute bottom-20 left-10 w-16 h-16 rounded-full bg-white/10 animate-float animation-delay-200" />
+                <div className="absolute top-1/2 right-20 w-4 h-4 bg-white/30 rotate-45 animate-pulse-soft" />
+                
+                <div>
+                  <h2 className="font-serif text-3xl font-black text-white italic mb-8">
+                    Tu viaje financiero empieza aquí 💜
+                  </h2>
+                  <div className="space-y-4">
+                    {[
+                      'Aprende con videos y quizzes',
+                      'Rastrea tus finanzas',
+                      'Obtén tu Pasaporte Financiero',
+                    ].map((benefit, i) => (
+                      <div key={i} className="flex items-center gap-3 text-white">
+                        <span className="w-6 h-6 rounded-full bg-white/20 flex items-center justify-center text-sm">✓</span>
+                        <span>{benefit}</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+                <p className="text-white/80 text-sm">Más de 2,300 mujeres ya empezaron</p>
+              </div>
+
+              {/* Right Panel (Form) */}
+              <div className="flex-1 p-6 md:p-8">
+                {/* Tab Switcher */}
+                <div className="flex p-1.5 rounded-full bg-[#FDE8F0] mb-6">
+                  <button
+                    onClick={() => setTab('register')}
+                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${
+                      tab === 'register' ? 'gradient-signature text-white' : 'text-[#6B3F5E]'
+                    }`}
+                  >
+                    Crear cuenta
+                  </button>
+                  <button
+                    onClick={() => setTab('login')}
+                    className={`flex-1 py-2.5 rounded-full text-sm font-bold transition-all ${
+                      tab === 'login' ? 'gradient-signature text-white' : 'text-[#6B3F5E]'
+                    }`}
+                  >
+                    Iniciar sesión
+                  </button>
+                </div>
+
+                {tab === 'register' ? (
+                  // Register Form
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-serif text-2xl font-bold text-[#1C0E1A] mb-1">Crea tu cuenta gratis</h3>
+                      <p className="text-sm text-[#6B3F5E]">Toma solo 2 minutos. Sin tarjeta de crédito.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-[#1C0E1A] mb-1">¿Cómo te llamas? 😊</label>
+                      <input
+                        type="text"
+                        placeholder="Tu nombre (ej. Valeria)"
+                        value={registerForm.firstName}
+                        onChange={(e) => setRegisterForm({ ...registerForm, firstName: e.target.value })}
+                        className={`w-full p-3 rounded-xl border-2 ${registerErrors.firstName ? 'border-[#D63F74] animate-shake' : 'border-[#EDD9EA]'} bg-[#FDFAF8] text-[#1C0E1A]`}
+                      />
+                      {registerErrors.firstName && <p className="text-xs text-[#D63F74] mt-1">{registerErrors.firstName}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-[#1C0E1A] mb-1">Tu correo electrónico 📧</label>
+                      <input
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={registerForm.email}
+                        onChange={(e) => setRegisterForm({ ...registerForm, email: e.target.value })}
+                        className={`w-full p-3 rounded-xl border-2 ${registerErrors.email ? 'border-[#D63F74] animate-shake' : 'border-[#EDD9EA]'} bg-[#FDFAF8] text-[#1C0E1A]`}
+                      />
+                      {registerErrors.email && <p className="text-xs text-[#D63F74] mt-1">{registerErrors.email}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-[#1C0E1A] mb-1">Crea una contraseña 🔒</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Mínimo 8 caracteres"
+                          value={registerForm.password}
+                          onChange={(e) => handlePasswordChange(e.target.value)}
+                          className={`w-full p-3 pr-12 rounded-xl border-2 ${registerErrors.password ? 'border-[#D63F74] animate-shake' : 'border-[#EDD9EA]'} bg-[#FDFAF8] text-[#1C0E1A]`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B3F5E]"
+                        >
+                          {showPassword ? '👁️' : '👁️‍🗨️'}
+                        </button>
+                      </div>
+                      <div className="flex gap-1 mt-2">
+                        {[0, 1, 2, 3].map((i) => (
+                          <div
+                            key={i}
+                            className={`h-1 flex-1 rounded-full transition-all ${
+                              i < passwordStrength
+                                ? ['bg-[#D63F74]', 'bg-[#F4A261]', 'bg-[#2DBD96]', 'bg-gradient-to-r from-[#D63F74] to-[#9B72CF]'][passwordStrength - 1]
+                                : 'bg-[#EDD9EA]'
+                            }`}
+                          />
+                        ))}
+                      </div>
+                      {registerErrors.password && <p className="text-xs text-[#D63F74] mt-1">{registerErrors.password}</p>}
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <label className="block text-sm font-bold text-[#1C0E1A] mb-1">Edad 🎂</label>
+                        <input
+                          type="number"
+                          min="16"
+                          max="35"
+                          placeholder="25"
+                          value={registerForm.age}
+                          onChange={(e) => setRegisterForm({ ...registerForm, age: e.target.value })}
+                          className={`w-full p-3 rounded-xl border-2 ${registerErrors.age ? 'border-[#D63F74] animate-shake' : 'border-[#EDD9EA]'} bg-[#FDFAF8] text-[#1C0E1A]`}
+                        />
+                        {registerErrors.age && <p className="text-xs text-[#D63F74] mt-1">{registerErrors.age}</p>}
+                      </div>
+                      <div>
+                        <label className="block text-sm font-bold text-[#1C0E1A] mb-1">¿Cómo te describes? ✨</label>
+                        <div className="flex gap-1">
+                          {[
+                            { id: 'estudiante', emoji: '👩‍🎓' },
+                            { id: 'trabajando', emoji: '💼' },
+                            { id: 'freelancer', emoji: '🚀' },
+                          ].map((occ) => (
+                            <button
+                              key={occ.id}
+                              type="button"
+                              onClick={() => setRegisterForm({ ...registerForm, occupation: occ.id as Occupation })}
+                              className={`flex-1 p-2 rounded-xl text-center transition-all ${
+                                registerForm.occupation === occ.id
+                                  ? 'bg-[#FDE8F0] border-2 border-[#D63F74]'
+                                  : 'bg-[#FDFAF8] border-2 border-[#EDD9EA]'
+                              }`}
+                            >
+                              {occ.emoji}
+                            </button>
+                          ))}
+                        </div>
+                        {registerErrors.occupation && <p className="text-xs text-[#D63F74] mt-1">{registerErrors.occupation}</p>}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-[#1C0E1A] mb-2">¿Cómo prefieres aprender?</label>
+                      <div className="grid grid-cols-2 gap-3">
+                        {[
+                          { id: 'claro', emoji: '📚', name: 'Modo Claro', desc: 'Directo y preciso' },
+                          { id: 'cercano', emoji: '💅', name: 'Modo Cercano', desc: 'Como entre amigas' },
+                        ].map((mode) => (
+                          <button
+                            key={mode.id}
+                            type="button"
+                            onClick={() => setRegisterForm({ ...registerForm, mode: mode.id as Mode })}
+                            className={`p-4 rounded-xl text-left transition-all ${
+                              registerForm.mode === mode.id
+                                ? 'bg-[#F0E8FD] border-2 border-[#9B72CF]'
+                                : 'bg-[#FDFAF8] border-2 border-[#EDD9EA]'
+                            }`}
+                          >
+                            <div className="text-xl mb-1">{mode.emoji}</div>
+                            <div className="font-bold text-[#1C0E1A] text-sm">{mode.name}</div>
+                            <div className="text-xs text-[#6B3F5E]">{mode.desc}</div>
+                          </button>
+                        ))}
+                      </div>
+                    </div>
+
+                    <button
+                      onClick={handleRegisterSubmit}
+                      disabled={isLoading}
+                      className="w-full py-4 rounded-2xl text-white font-extrabold text-lg gradient-signature disabled:opacity-70"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Creando tu cuenta...
+                        </span>
+                      ) : (
+                        'Crear mi cuenta →'
+                      )}
+                    </button>
+
+                    <p className="text-xs text-center text-[#B08DA8]">
+                      Al crear tu cuenta aceptas los <button className="text-[#D63F74]">Términos</button> y la <button className="text-[#D63F74]">Política de privacidad</button>
+                    </p>
+                  </div>
+                ) : (
+                  // Login Form
+                  <div className="space-y-4">
+                    <div>
+                      <h3 className="font-serif text-2xl font-bold text-[#1C0E1A] mb-1">¡Hola de nuevo!</h3>
+                      <p className="text-sm text-[#6B3F5E]">Ingresa a tu cuenta para continuar.</p>
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-[#1C0E1A] mb-1">Tu correo electrónico</label>
+                      <input
+                        type="email"
+                        placeholder="tu@email.com"
+                        value={loginForm.email}
+                        onChange={(e) => setLoginForm({ ...loginForm, email: e.target.value })}
+                        className={`w-full p-3 rounded-xl border-2 ${loginErrors.email ? 'border-[#D63F74] animate-shake' : 'border-[#EDD9EA]'} bg-[#FDFAF8] text-[#1C0E1A]`}
+                      />
+                      {loginErrors.email && <p className="text-xs text-[#D63F74] mt-1">{loginErrors.email}</p>}
+                    </div>
+
+                    <div>
+                      <label className="block text-sm font-bold text-[#1C0E1A] mb-1">Tu contraseña</label>
+                      <div className="relative">
+                        <input
+                          type={showPassword ? 'text' : 'password'}
+                          placeholder="Tu contraseña"
+                          value={loginForm.password}
+                          onChange={(e) => setLoginForm({ ...loginForm, password: e.target.value })}
+                          className={`w-full p-3 pr-12 rounded-xl border-2 ${loginErrors.password ? 'border-[#D63F74] animate-shake' : 'border-[#EDD9EA]'} bg-[#FDFAF8] text-[#1C0E1A]`}
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowPassword(!showPassword)}
+                          className="absolute right-3 top-1/2 -translate-y-1/2 text-[#6B3F5E]"
+                        >
+                          {showPassword ? '👁️' : '👁️‍🗨️'}
+                        </button>
+                      </div>
+                      {loginErrors.password && <p className="text-xs text-[#D63F74] mt-1">{loginErrors.password}</p>}
+                    </div>
+
+                    <div className="flex items-center justify-between">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input
+                          type="checkbox"
+                          checked={loginForm.remember}
+                          onChange={(e) => setLoginForm({ ...loginForm, remember: e.target.checked })}
+                          className="sr-only"
+                        />
+                        <div className={`w-5 h-5 rounded border-2 flex items-center justify-center ${loginForm.remember ? 'bg-[#D63F74] border-[#D63F74]' : 'border-[#EDD9EA]'}`}>
+                          {loginForm.remember && <span className="text-white text-xs">✓</span>}
+                        </div>
+                        <span className="text-sm text-[#6B3F5E]">Recordarme</span>
+                      </label>
+                      <button className="text-sm text-[#9B72CF] font-medium">¿Olvidaste tu contraseña?</button>
+                    </div>
+
+                    <button
+                      onClick={handleLoginSubmit}
+                      disabled={isLoading}
+                      className="w-full py-4 rounded-2xl text-white font-extrabold text-lg gradient-signature disabled:opacity-70"
+                    >
+                      {isLoading ? (
+                        <span className="flex items-center justify-center gap-2">
+                          <span className="w-5 h-5 border-2 border-white/30 border-t-white rounded-full animate-spin" />
+                          Iniciando sesión...
+                        </span>
+                      ) : (
+                        'Iniciar sesión →'
+                      )}
+                    </button>
+
+                    {/* Demo credentials */}
+                    <div className="p-4 rounded-xl bg-[#E4F7F1] border border-[#2DBD96]">
+                      <p className="text-sm font-bold text-[#1C0E1A] mb-1">Cuenta de demostración:</p>
+                      <p className="text-sm text-[#6B3F5E]">📧 demo@finfemina.pe</p>
+                      <p className="text-sm text-[#6B3F5E]">🔒 demo1234</p>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+// User Dropdown
+function UserDropdown({ onLogout, setActiveTab }: { onLogout: () => void; setActiveTab: (tab: Tab) => void }) {
+  const [isOpen, setIsOpen] = useState(false)
+  const { state } = useAuth()
+  const { addToast } = useToast()
+  const dropdownRef = useRef<HTMLDivElement>(null)
+
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(e.target as Node)) {
+        setIsOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClickOutside)
+    return () => document.removeEventListener('mousedown', handleClickOutside)
+  }, [])
+
+  const handleLogout = () => {
+    const name = state.user?.name || ''
+    onLogout()
+    addToast('info', `Hasta pronto, ${name} 👋`)
+    setIsOpen(false)
+  }
+
+  if (!state.user) return null
+
+  return (
+    <div className="relative" ref={dropdownRef}>
+      <button
+        onClick={() => setIsOpen(!isOpen)}
+        className="flex items-center gap-2"
+      >
+        <div className="w-9 h-9 rounded-full gradient-signature flex items-center justify-center text-white font-bold text-sm">
+          {state.user.name.charAt(0).toUpperCase()}
+        </div>
+        <span className="hidden sm:block text-sm font-bold text-[#1C0E1A]">{state.user.name}</span>
+      </button>
+
+      {isOpen && (
+        <div className="absolute top-full right-0 mt-2 w-48 bg-white rounded-xl shadow-lg border border-[#EDD9EA] py-2 animate-fadeUp">
+          <button
+            onClick={() => { setActiveTab('logros'); setIsOpen(false) }}
+            className="w-full px-4 py-2 text-left text-sm text-[#1C0E1A] hover:bg-[#FDE8F0]"
+          >
+            👤 Mi perfil
+          </button>
+          <button
+            onClick={() => { setActiveTab('logros'); setIsOpen(false) }}
+            className="w-full px-4 py-2 text-left text-sm text-[#1C0E1A] hover:bg-[#FDE8F0]"
+          >
+            🏆 Mis logros
+          </button>
+          <button className="w-full px-4 py-2 text-left text-sm text-[#1C0E1A] hover:bg-[#FDE8F0]">
+            ⚙️ Configuración
+          </button>
+          <hr className="my-2 border-[#EDD9EA]" />
+          <button
+            onClick={handleLogout}
+            className="w-full px-4 py-2 text-left text-sm text-[#D63F74] hover:bg-[#FDE8F0]"
+          >
+            Cerrar sesión →
+          </button>
+        </div>
+      )}
+    </div>
+  )
+}
+
 // Navigation Component
-function Navigation({ activeTab, setActiveTab }: { activeTab: Tab; setActiveTab: (tab: Tab) => void }) {
+function Navigation({ 
+  activeTab, 
+  setActiveTab, 
+  onAuthClick 
+}: { 
+  activeTab: Tab
+  setActiveTab: (tab: Tab) => void
+  onAuthClick: () => void
+}) {
   const [scrolled, setScrolled] = useState(false)
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false)
+  const { state, logout } = useAuth()
 
   useEffect(() => {
     const handleScroll = () => setScrolled(window.scrollY > 20)
@@ -265,10 +1039,16 @@ function Navigation({ activeTab, setActiveTab }: { activeTab: Tab; setActiveTab:
           ))}
         </div>
 
-        {/* Desktop CTA */}
-        <button className="hidden md:flex btn-gradient px-5 py-2.5 text-sm">
-          Comenzar gratis 💜
-        </button>
+        {/* Desktop CTA / User */}
+        <div className="hidden md:block">
+          {state.isAuthenticated ? (
+            <UserDropdown onLogout={logout} setActiveTab={setActiveTab} />
+          ) : (
+            <button onClick={onAuthClick} className="btn-gradient px-5 py-2.5 text-sm">
+              Comenzar gratis 💜
+            </button>
+          )}
+        </div>
 
         {/* Mobile Menu Button */}
         <button 
@@ -297,9 +1077,15 @@ function Navigation({ activeTab, setActiveTab }: { activeTab: Tab; setActiveTab:
                 {tab.emoji} {tab.label}
               </button>
             ))}
-            <button className="btn-gradient px-5 py-3 mt-2 text-sm">
-              Comenzar gratis 💜
-            </button>
+            {state.isAuthenticated ? (
+              <button onClick={logout} className="px-4 py-3 rounded-xl text-left font-bold text-[#D63F74]">
+                Cerrar sesión →
+              </button>
+            ) : (
+              <button onClick={onAuthClick} className="btn-gradient px-5 py-3 mt-2 text-sm">
+                Comenzar gratis 💜
+              </button>
+            )}
           </div>
         </div>
       )}
@@ -327,9 +1113,71 @@ function BackgroundBlobs() {
   )
 }
 
+// Auth Guard Overlay
+function AuthGuard({ message, onAuthClick }: { message: string; onAuthClick: () => void }) {
+  return (
+    <div className="absolute inset-0 z-10 flex items-center justify-center rounded-[28px] overflow-hidden">
+      <div className="absolute inset-0 bg-white/80 backdrop-blur-sm" />
+      <div className="relative text-center p-6">
+        <p className="text-[#6B3F5E] mb-4">{message}</p>
+        <button onClick={onAuthClick} className="btn-gradient px-6 py-3 text-sm">
+          Crear cuenta gratis
+        </button>
+      </div>
+    </div>
+  )
+}
+
+// Tour Overlay
+function TourOverlay({ step, onNext, onSkip }: { step: number; onNext: () => void; onSkip: () => void }) {
+  const steps = [
+    { target: 'nav', title: '5 secciones para tu vida financiera', desc: 'Navega fácilmente entre todas las herramientas.' },
+    { target: 'tracker', title: 'Registra tu dinero aquí', desc: 'Controla tus ingresos y gastos con gráficos visuales.' },
+    { target: 'learn', title: 'Videos de 60s + quizzes', desc: 'Aprende finanzas de forma divertida y gana puntos.' },
+    { target: 'compare', title: 'Datos reales de la SBS', desc: 'Compara tarjetas y cuentas con información oficial.' },
+    { target: 'passport', title: 'Tu credencial financiera', desc: 'Completa el programa y obtén tu Pasaporte Financiero.' },
+  ]
+
+  const currentStep = steps[step]
+
+  return (
+    <div className="fixed inset-0 z-[200]" style={{ background: 'rgba(28,14,26,0.72)' }}>
+      {/* Skip button */}
+      <button
+        onClick={onSkip}
+        className="absolute top-4 right-4 text-white/80 hover:text-white text-sm font-medium"
+      >
+        Saltar tour ✕
+      </button>
+
+      {/* Tooltip */}
+      <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2">
+        <div className="gradient-signature p-6 rounded-2xl text-white max-w-sm animate-fadeUp">
+          <h3 className="font-serif text-xl font-bold mb-2">{currentStep.title}</h3>
+          <p className="text-white/90 mb-4">{currentStep.desc}</p>
+          <div className="flex items-center justify-between">
+            <div className="flex gap-1">
+              {steps.map((_, i) => (
+                <div key={i} className={`w-2 h-2 rounded-full ${i === step ? 'bg-white' : 'bg-white/30'}`} />
+              ))}
+            </div>
+            <button
+              onClick={onNext}
+              className="px-4 py-2 rounded-xl bg-white text-[#D63F74] font-bold text-sm"
+            >
+              {step === steps.length - 1 ? 'Terminar' : 'Siguiente →'}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ============ INICIO PAGE ============
-function InicioPage() {
+function InicioPage({ onAuthClick, setActiveTab }: { onAuthClick: () => void; setActiveTab: (tab: Tab) => void }) {
   const [mode, setMode] = useState<Mode>('claro')
+  const { state } = useAuth()
 
   const modeContent = {
     claro: {
@@ -340,6 +1188,30 @@ function InicioPage() {
       title: 'Interés Compuesto',
       text: 'Bestie, imagina que tu dinero tiene bebés, y esos bebés también tienen bebés. Así funciona el interés compuesto: tu plata crece solita mientras tú te tomas un café. Es como magia financiera.',
     },
+  }
+
+  const handleStartClick = () => {
+    if (state.isAuthenticated) {
+      setActiveTab('aprende')
+    } else {
+      onAuthClick()
+    }
+  }
+
+  const handleDemoClick = () => {
+    if (state.isAuthenticated) {
+      // Start tour
+    } else {
+      onAuthClick()
+    }
+  }
+
+  const handlePassportClick = () => {
+    if (state.isAuthenticated) {
+      setActiveTab('logros')
+    } else {
+      onAuthClick()
+    }
   }
 
   return (
@@ -394,10 +1266,10 @@ function InicioPage() {
 
           {/* CTA Buttons */}
           <div className="flex flex-wrap gap-4 mb-16">
-            <button className="btn-gradient px-8 py-4 text-lg">
+            <button onClick={handleStartClick} className="btn-gradient px-8 py-4 text-lg">
               Empezar gratis ✨
             </button>
-            <button className="px-8 py-4 rounded-2xl border-2 border-[#D63F74] text-[#D63F74] font-extrabold hover:bg-[#FDE8F0] transition-all">
+            <button onClick={handleDemoClick} className="px-8 py-4 rounded-2xl border-2 border-[#D63F74] text-[#D63F74] font-extrabold hover:bg-[#FDE8F0] transition-all">
               Ver demo →
             </button>
           </div>
@@ -513,8 +1385,8 @@ function InicioPage() {
           <p className="text-white/90 mb-6 max-w-md">
             Completa los módulos, gana puntos y demuestra que estás lista para el mundo financiero.
           </p>
-          <button className="px-8 py-4 rounded-2xl bg-white text-[#D63F74] font-extrabold hover:shadow-lg transition-all">
-            Comenzar mi pasaporte 🚀
+          <button onClick={handlePassportClick} className="px-8 py-4 rounded-2xl bg-white text-[#D63F74] font-extrabold hover:shadow-lg transition-all">
+            Obtener mi Pasaporte Financiero 🚀
           </button>
         </div>
       </section>
@@ -523,11 +1395,30 @@ function InicioPage() {
 }
 
 // ============ APRENDE PAGE ============
-function AprendePage({ points, setPoints }: { points: number; setPoints: (p: number) => void }) {
+function AprendePage({ 
+  onAuthClick,
+  onEarnPoints,
+}: { 
+  onAuthClick: () => void
+  onEarnPoints: (amount: number, x: number, y: number) => void
+}) {
+  const { state } = useAuth()
+  const { addToast } = useToast()
   const [filter, setFilter] = useState<CategoryFilter>('todos')
   const [quiz, setQuiz] = useState<QuizState>({ isOpen: false, videoId: null, answered: false, selectedAnswer: null, correctAnswer: 0 })
   const [streak, setStreak] = useState(5)
+  const [watchedVideos, setWatchedVideos] = useState<Set<number>>(new Set())
+  const [videoModal, setVideoModal] = useState<{ isOpen: boolean; videoId: number | null; content: VideoContent | null; isLoading: boolean; currentSlide: number; isPlaying: boolean }>({
+    isOpen: false,
+    videoId: null,
+    content: null,
+    isLoading: false,
+    currentSlide: 0,
+    isPlaying: true,
+  })
+  
   const weekDays = [true, true, true, true, true, false, false]
+  const userPoints = state.user?.points || 0
 
   const filteredVideos = filter === 'todos' ? VIDEOS : VIDEOS.filter(v => v.category === filter)
 
@@ -539,21 +1430,126 @@ function AprendePage({ points, setPoints }: { points: number; setPoints: (p: num
   }
 
   const openQuiz = (videoId: number) => {
+    if (!state.isAuthenticated) {
+      onAuthClick()
+      return
+    }
     const q = QUIZ_QUESTIONS[videoId]
     setQuiz({ isOpen: true, videoId, answered: false, selectedAnswer: null, correctAnswer: q.correct })
   }
 
-  const answerQuiz = (answerIndex: number) => {
+  const answerQuiz = (answerIndex: number, e: React.MouseEvent) => {
     setQuiz(prev => ({ ...prev, answered: true, selectedAnswer: answerIndex }))
     if (answerIndex === quiz.correctAnswer) {
-      setPoints(points + 50)
+      onEarnPoints(50, e.clientX, e.clientY)
       setStreak(s => s + 1)
+      addToast('success', '¡Respuesta correcta! +50 pts 🎉')
+    } else {
+      addToast('warning', 'Casi... ¡Sigue aprendiendo! 💪')
     }
   }
 
   const closeQuiz = () => {
     setQuiz({ isOpen: false, videoId: null, answered: false, selectedAnswer: null, correctAnswer: 0 })
   }
+
+  const openVideoModal = async (videoId: number) => {
+    if (!state.isAuthenticated) {
+      onAuthClick()
+      return
+    }
+
+    const video = VIDEOS.find(v => v.id === videoId)
+    if (!video) return
+
+    setVideoModal({ isOpen: true, videoId, content: null, isLoading: true, currentSlide: 0, isPlaying: true })
+
+    try {
+      const response = await fetch('/api/video-content', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          videoTitle: video.title,
+          videoCategory: video.category,
+          videoTip: video.tip,
+          userMode: state.user?.mode || 'claro',
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to generate content')
+
+      const data = await response.json()
+      setVideoModal(prev => ({ ...prev, content: data, isLoading: false }))
+    } catch {
+      // Fallback content
+      const fallbackContent: VideoContent = {
+        title: video.title,
+        duration: '2 min',
+        slides: [
+          { emoji: '📚', headline: '¿Qué aprenderás hoy?', body: video.tip, tip: 'Toma notas si te ayuda' },
+          { emoji: video.emoji, headline: 'Concepto clave', body: `${video.title} es fundamental para tu educación financiera.`, tip: 'Guarda este concepto' },
+          { emoji: '💡', headline: '¿Cómo te afecta?', body: 'Entender este tema te ayudará a tomar mejores decisiones con tu dinero.', tip: 'Aplícalo hoy mismo' },
+          { emoji: '🚀', headline: '¿Qué hacer ahora?', body: 'Completa el quiz para ganar puntos y reforzar lo aprendido.', tip: '¡Tú puedes!' },
+        ],
+        keyTakeaway: video.tip,
+        relatedTopics: ['Ahorro', 'Presupuesto', 'Crédito'],
+      }
+      setVideoModal(prev => ({ ...prev, content: fallbackContent, isLoading: false }))
+    }
+  }
+
+  const markVideoAsWatched = (videoId: number, e: React.MouseEvent) => {
+    if (!watchedVideos.has(videoId)) {
+      setWatchedVideos(prev => new Set([...prev, videoId]))
+      onEarnPoints(30, e.clientX, e.clientY)
+      addToast('success', '¡Video completado! +30 pts ✨')
+    }
+  }
+
+  // Auto-advance slides
+  useEffect(() => {
+    if (!videoModal.isOpen || !videoModal.content || !videoModal.isPlaying) return
+
+    const timer = setInterval(() => {
+      setVideoModal(prev => {
+        if (prev.currentSlide < (prev.content?.slides.length || 0) - 1) {
+          return { ...prev, currentSlide: prev.currentSlide + 1 }
+        }
+        return { ...prev, isPlaying: false }
+      })
+    }, 4000)
+
+    return () => clearInterval(timer)
+  }, [videoModal.isOpen, videoModal.content, videoModal.isPlaying, videoModal.currentSlide])
+
+  // Keyboard support for video modal
+  useEffect(() => {
+    if (!videoModal.isOpen) return
+
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setVideoModal(prev => ({ ...prev, isOpen: false }))
+      } else if (e.key === 'ArrowRight' && videoModal.content) {
+        setVideoModal(prev => ({
+          ...prev,
+          currentSlide: Math.min(prev.currentSlide + 1, (prev.content?.slides.length || 1) - 1),
+          isPlaying: false,
+        }))
+      } else if (e.key === 'ArrowLeft') {
+        setVideoModal(prev => ({
+          ...prev,
+          currentSlide: Math.max(prev.currentSlide - 1, 0),
+          isPlaying: false,
+        }))
+      } else if (e.key === ' ') {
+        e.preventDefault()
+        setVideoModal(prev => ({ ...prev, isPlaying: !prev.isPlaying }))
+      }
+    }
+
+    window.addEventListener('keydown', handleKeyDown)
+    return () => window.removeEventListener('keydown', handleKeyDown)
+  }, [videoModal.isOpen, videoModal.content])
 
   return (
     <div className="min-h-screen pt-[68px]">
@@ -581,7 +1577,7 @@ function AprendePage({ points, setPoints }: { points: number; setPoints: (p: num
             </div>
             <div className="border-l border-[#EDD9EA] pl-4 ml-2">
               <div className="text-xs text-[#6B3F5E]">Puntos</div>
-              <div className="font-serif text-xl font-black gradient-signature-text">{points}</div>
+              <div className="font-serif text-xl font-black gradient-signature-text">{userPoints}</div>
             </div>
           </div>
         </div>
@@ -617,14 +1613,20 @@ function AprendePage({ points, setPoints }: { points: number; setPoints: (p: num
           {filteredVideos.map((video, i) => {
             const color = categoryColors[video.category]
             const colors = getColorClasses(color)
+            const isWatched = watchedVideos.has(video.id)
             return (
               <div key={video.id} className="card-finfemina overflow-hidden animate-fadeUp" style={{ animationDelay: `${i * 50}ms` }}>
                 {/* Thumbnail */}
-                <div className={`h-[150px] ${colors.light} flex items-center justify-center relative`}>
+                <div className={`h-[150px] ${colors.light} flex items-center justify-center relative ${isWatched ? 'opacity-80' : ''}`}>
                   <span className="text-5xl">{video.emoji}</span>
                   <div className={`absolute bottom-3 right-3 px-2 py-1 rounded-full bg-white text-xs font-bold ${colors.text}`}>
-                    ▶ {video.duration}
+                    {isWatched ? '✓ Visto' : `▶ ${video.duration}`}
                   </div>
+                  {isWatched && (
+                    <div className="absolute top-3 right-3 w-6 h-6 rounded-full bg-[#2DBD96] flex items-center justify-center text-white text-xs">
+                      ✓
+                    </div>
+                  )}
                 </div>
                 {/* Content */}
                 <div className="p-4">
@@ -635,12 +1637,20 @@ function AprendePage({ points, setPoints }: { points: number; setPoints: (p: num
                       <span className="text-[#1C0E1A]">{video.tip}</span>
                     </div>
                   </div>
-                  <button
-                    onClick={() => openQuiz(video.id)}
-                    className="w-full py-2 rounded-xl border-2 border-[#D63F74] text-[#D63F74] font-bold text-sm hover:bg-[#FDE8F0] transition-all"
-                  >
-                    📝 Hacer quiz • +50 pts
-                  </button>
+                  <div className="flex gap-2">
+                    <button
+                      onClick={() => openVideoModal(video.id)}
+                      className={`flex-1 py-2 rounded-xl border-2 ${colors.border} ${colors.text} font-bold text-sm hover:bg-[#FDE8F0] transition-all`}
+                    >
+                      ▶ Ver
+                    </button>
+                    <button
+                      onClick={() => openQuiz(video.id)}
+                      className="flex-1 py-2 rounded-xl border-2 border-[#D63F74] text-[#D63F74] font-bold text-sm hover:bg-[#FDE8F0] transition-all"
+                    >
+                      📝 Quiz
+                    </button>
+                  </div>
                 </div>
               </div>
             )
@@ -675,7 +1685,7 @@ function AprendePage({ points, setPoints }: { points: number; setPoints: (p: num
                 return (
                   <button
                     key={i}
-                    onClick={() => !quiz.answered && answerQuiz(i)}
+                    onClick={(e) => !quiz.answered && answerQuiz(i, e)}
                     disabled={quiz.answered}
                     className={buttonClass}
                   >
@@ -700,12 +1710,148 @@ function AprendePage({ points, setPoints }: { points: number; setPoints: (p: num
           </div>
         </div>
       )}
+
+      {/* Video Modal */}
+      {videoModal.isOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80">
+          <div 
+            className="w-full max-w-3xl rounded-[28px] overflow-hidden animate-fadeUp"
+            style={{ background: '#1C0E1A', border: '1.5px solid transparent', backgroundClip: 'padding-box' }}
+          >
+            {/* Video Area */}
+            <div className="relative h-[300px] md:h-[400px] flex items-center justify-center overflow-hidden">
+              {videoModal.isLoading ? (
+                // Loading state
+                <div className="text-center">
+                  <div className="w-16 h-16 mx-auto mb-4 rounded-full gradient-signature animate-pulse-soft flex items-center justify-center">
+                    💜
+                  </div>
+                  <p className="text-white/80">Femi está preparando tu clase... ✨</p>
+                </div>
+              ) : videoModal.content && (
+                // Slide content
+                <div className="text-center px-8 animate-fadeUp">
+                  <div className="text-7xl mb-4 animate-float">
+                    {videoModal.content.slides[videoModal.currentSlide].emoji}
+                  </div>
+                  <h3 className="font-serif text-2xl md:text-3xl font-bold text-white italic mb-4">
+                    {videoModal.content.slides[videoModal.currentSlide].headline}
+                  </h3>
+                  <p className="text-white/80 max-w-md mx-auto leading-relaxed">
+                    {videoModal.content.slides[videoModal.currentSlide].body}
+                  </p>
+                  <div className="mt-6 px-4 py-2 rounded-full gradient-signature inline-block">
+                    <span className="text-white text-sm">💡 {videoModal.content.slides[videoModal.currentSlide].tip}</span>
+                  </div>
+                </div>
+              )}
+
+              {/* Progress bar */}
+              {videoModal.content && (
+                <div className="absolute bottom-0 left-0 right-0 h-1 bg-white/20">
+                  <div 
+                    className="h-full gradient-signature transition-all duration-300"
+                    style={{ width: `${((videoModal.currentSlide + 1) / videoModal.content.slides.length) * 100}%` }}
+                  />
+                </div>
+              )}
+
+              {/* Slide counter */}
+              {videoModal.content && (
+                <div className="absolute top-4 right-4 text-white/60 text-sm">
+                  {videoModal.currentSlide + 1} / {videoModal.content.slides.length}
+                </div>
+              )}
+
+              {/* Controls */}
+              {videoModal.content && (
+                <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex items-center gap-4">
+                  <button
+                    onClick={() => setVideoModal(prev => ({ ...prev, currentSlide: Math.max(0, prev.currentSlide - 1), isPlaying: false }))}
+                    className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+                  >
+                    ←
+                  </button>
+                  <button
+                    onClick={() => setVideoModal(prev => ({ ...prev, isPlaying: !prev.isPlaying }))}
+                    className="w-12 h-12 rounded-full bg-white text-[#1C0E1A] flex items-center justify-center"
+                  >
+                    {videoModal.isPlaying ? '⏸' : '▶'}
+                  </button>
+                  <button
+                    onClick={() => setVideoModal(prev => ({ ...prev, currentSlide: Math.min((prev.content?.slides.length || 1) - 1, prev.currentSlide + 1), isPlaying: false }))}
+                    className="w-10 h-10 rounded-full bg-white/10 text-white flex items-center justify-center hover:bg-white/20"
+                  >
+                    →
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Bottom content area */}
+            <div className="bg-white p-6">
+              {videoModal.content && (
+                <>
+                  <div className="mb-4">
+                    <h4 className="font-bold text-[#1C0E1A] mb-2">🎯 Lo más importante:</h4>
+                    <p className="text-[#D63F74] font-serif text-lg">{videoModal.content.keyTakeaway}</p>
+                  </div>
+
+                  <div className="mb-4">
+                    <h4 className="font-bold text-[#1C0E1A] mb-2">Sigue aprendiendo:</h4>
+                    <div className="flex flex-wrap gap-2">
+                      {videoModal.content.relatedTopics.map((topic, i) => (
+                        <span key={i} className="px-3 py-1 rounded-full bg-[#F0E8FD] text-[#9B72CF] text-sm font-medium">
+                          {topic}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <button
+                      onClick={(e) => {
+                        markVideoAsWatched(videoModal.videoId!, e)
+                        setVideoModal(prev => ({ ...prev, isOpen: false }))
+                      }}
+                      className={`flex-1 py-3 rounded-xl font-bold transition-all ${
+                        watchedVideos.has(videoModal.videoId!)
+                          ? 'bg-[#E4F7F1] text-[#2DBD96]'
+                          : 'bg-[#E4F7F1] text-[#2DBD96] hover:bg-[#D0F0E5]'
+                      }`}
+                    >
+                      {watchedVideos.has(videoModal.videoId!) ? '✓ Marcado como visto' : 'Marcar como visto ✓'}
+                    </button>
+                    <button
+                      onClick={() => {
+                        setVideoModal(prev => ({ ...prev, isOpen: false }))
+                        if (videoModal.videoId) openQuiz(videoModal.videoId)
+                      }}
+                      className="flex-1 py-3 rounded-xl font-bold btn-gradient"
+                    >
+                      📝 Hacer quiz
+                    </button>
+                  </div>
+                </>
+              )}
+
+              <button
+                onClick={() => setVideoModal(prev => ({ ...prev, isOpen: false }))}
+                className="w-full mt-3 py-2 text-[#6B3F5E] font-medium"
+              >
+                Cerrar
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
 
 // ============ TRACKER PAGE ============
-function TrackerPage() {
+function TrackerPage({ onAuthClick }: { onAuthClick: () => void }) {
+  const { state } = useAuth()
   const [period, setPeriod] = useState<PeriodFilter>('mes')
   const [chartType, setChartType] = useState<ChartType>('barras')
   const [transactions, setTransactions] = useState<Transaction[]>(INITIAL_TRANSACTIONS)
@@ -766,6 +1912,8 @@ function TrackerPage() {
     { id: 2, emoji: '✈️', name: 'Viaje a Cusco', current: 800, target: 2000, months: 8 },
   ]
 
+  const userName = state.user?.name || 'Usuario'
+
   return (
     <div className="min-h-screen pt-[68px]">
       <div className="max-w-7xl mx-auto px-4 py-12">
@@ -773,7 +1921,7 @@ function TrackerPage() {
         <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
           <div>
             <h1 className="font-serif text-4xl font-black text-[#1C0E1A]">Tracker Personal</h1>
-            <p className="text-[#6B3F5E]">Hola, Valeria 👋 • Controla tus finanzas y alcanza tus metas</p>
+            <p className="text-[#6B3F5E]">Hola, {userName} 👋 • Controla tus finanzas y alcanza tus metas</p>
           </div>
           <div className="flex gap-2 p-1.5 rounded-full bg-[#FDE8F0]">
             {(['semana', 'mes', 'semestre', 'año'] as PeriodFilter[]).map((p) => (
@@ -808,7 +1956,7 @@ function TrackerPage() {
                   <span className="text-sm text-[#6B3F5E]">{item.label}</span>
                 </div>
                 <div className={`font-serif text-2xl font-black ${colors.text}`}>
-                  {item.isPercent ? item.value : `S/ ${item.value.toLocaleString()}`}
+                  {item.isPercent ? item.value : `S/ ${(item.value as number).toLocaleString()}`}
                 </div>
               </div>
             )
@@ -983,7 +2131,13 @@ function TrackerPage() {
           </div>
 
           {/* Registrar movimiento */}
-          <div className="card-finfemina p-6">
+          <div className="card-finfemina p-6 relative">
+            {!state.isAuthenticated && (
+              <AuthGuard 
+                message="Inicia sesión para guardar tus movimientos 💜" 
+                onAuthClick={onAuthClick} 
+              />
+            )}
             <h2 className="font-serif text-xl font-bold text-[#1C0E1A] mb-6">Registrar movimiento 💜</h2>
             
             {/* Type Toggle */}
@@ -1052,7 +2206,13 @@ function TrackerPage() {
           {goals.map((goal) => {
             const progress = (goal.current / goal.target) * 100
             return (
-              <div key={goal.id} className="card-finfemina p-6 gradient-pastel">
+              <div key={goal.id} className="card-finfemina p-6 gradient-pastel relative">
+                {!state.isAuthenticated && (
+                  <AuthGuard 
+                    message="Inicia sesión para crear metas 💜" 
+                    onAuthClick={onAuthClick} 
+                  />
+                )}
                 <div className="flex items-center gap-3 mb-4">
                   <span className="text-3xl">{goal.emoji}</span>
                   <div>
@@ -1439,7 +2599,9 @@ function CompararPage() {
 }
 
 // ============ LOGROS PAGE ============
-function LogrosPage({ points }: { points: number }) {
+function LogrosPage({ onAuthClick }: { onAuthClick: () => void }) {
+  const { state } = useAuth()
+  const points = state.user?.points || 0
   const currentLevel = LEVELS.reduce((acc, level) => points >= level.points ? level : acc, LEVELS[0])
   const nextLevel = LEVELS.find(l => l.points > points) || LEVELS[LEVELS.length - 1]
   const progressToNext = nextLevel.points > currentLevel.points 
@@ -1553,8 +2715,11 @@ function LogrosPage({ points }: { points: number }) {
             </div>
           </div>
           
-          <button className="px-6 py-3 rounded-xl bg-white text-[#D63F74] font-extrabold hover:shadow-lg transition-all">
-            Ver mi progreso 🚀
+          <button 
+            onClick={() => !state.isAuthenticated && onAuthClick()}
+            className="px-6 py-3 rounded-xl bg-white text-[#D63F74] font-extrabold hover:shadow-lg transition-all"
+          >
+            {state.isAuthenticated ? 'Ver mi progreso 🚀' : 'Comenzar mi Pasaporte 🚀'}
           </button>
         </div>
       </div>
@@ -1563,19 +2728,36 @@ function LogrosPage({ points }: { points: number }) {
 }
 
 // ============ AI CHAT WIDGET ============
-function AIChatWidget() {
+function AIChatWidget({ onAuthClick, activeTab }: { onAuthClick: () => void; activeTab: Tab }) {
+  const { state } = useAuth()
+  const { addToast } = useToast()
   const [isOpen, setIsOpen] = useState(false)
   const [messages, setMessages] = useState<ChatMessage[]>([])
   const [input, setInput] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
   const messagesEndRef = useRef<HTMLDivElement>(null)
+  const maxChars = 200
 
-  const suggestions = [
-    '¿Estoy gastando demasiado?',
-    '¿Cuál tarjeta me conviene?',
-    '¿Cómo empiezo a ahorrar?',
-    '¿Qué es un ETF?',
-  ]
+  // Contextual suggestions based on active tab
+  const getSuggestions = () => {
+    switch (activeTab) {
+      case 'inicio':
+        return ['¿Por dónde empiezo?', '¿Qué es el interés compuesto?', '¿Cómo abro mi primera cuenta?']
+      case 'tracker':
+        return ['¿Estoy gastando bien este mes?', '¿Cómo puedo ahorrar más?', 'Analiza mis gastos']
+      case 'comparar':
+        return ['¿Qué tarjeta me conviene?', '¿Cuál banco es mejor para mí?', '¿Qué es la TEA?']
+      case 'aprende':
+        return ['Explícame más sobre este tema', '¿Cuál video veo primero?']
+      case 'logros':
+        return ['¿Cómo obtengo mi Pasaporte?', '¿Qué nivel sigue?']
+      default:
+        return ['¿Cómo empiezo a ahorrar?', '¿Qué es un ETF?']
+    }
+  }
+
+  const suggestions = getSuggestions()
 
   const scrollToBottom = useCallback(() => {
     messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' })
@@ -1585,40 +2767,105 @@ function AIChatWidget() {
     scrollToBottom()
   }, [messages, scrollToBottom])
 
-  const sendMessage = async (text: string) => {
-    if (!text.trim()) return
+  // Load chat history from localStorage
+  useEffect(() => {
+    if (state.user) {
+      const stored = localStorage.getItem(`finfemina_chat_${state.user.id}`)
+      if (stored) {
+        try {
+          setMessages(JSON.parse(stored))
+        } catch {
+          // Ignore parse errors
+        }
+      }
+    }
+  }, [state.user])
 
-    const userMessage: ChatMessage = { role: 'user', content: text }
+  // Save chat history
+  useEffect(() => {
+    if (state.user && messages.length > 0) {
+      localStorage.setItem(`finfemina_chat_${state.user.id}`, JSON.stringify(messages))
+    }
+  }, [messages, state.user])
+
+  const handleChatButtonClick = () => {
+    if (!state.isAuthenticated) {
+      onAuthClick()
+      return
+    }
+    setIsOpen(!isOpen)
+  }
+
+  const clearChat = () => {
+    setMessages([])
+    if (state.user) {
+      localStorage.removeItem(`finfemina_chat_${state.user.id}`)
+    }
+    addToast('info', 'Chat limpiado')
+  }
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || !state.isAuthenticated) return
+
+    const timestamp = new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' })
+    const userMessage: ChatMessage = { role: 'user', content: text, timestamp }
     setMessages(prev => [...prev, userMessage])
     setInput('')
     setIsLoading(true)
+    setError(null)
 
     try {
       const response = await fetch('/api/chat', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ messages: [...messages, userMessage] }),
+        body: JSON.stringify({ 
+          messages: [...messages, userMessage],
+          user: state.user,
+        }),
       })
 
-      if (!response.ok) throw new Error('Network response was not ok')
+      if (!response.ok) {
+        if (response.status === 429) {
+          throw new Error('rate_limit')
+        }
+        throw new Error('Network response was not ok')
+      }
 
       const data = await response.json()
-      setMessages(prev => [...prev, { role: 'assistant', content: data.message }])
-    } catch {
-      setMessages(prev => [...prev, { 
-        role: 'assistant', 
-        content: 'Lo siento, hubo un error al procesar tu mensaje. Por favor intenta de nuevo.' 
-      }])
+      
+      // Simulate streaming effect
+      const fullText = data.message
+      let displayedText = ''
+      const assistantMessage: ChatMessage = { role: 'assistant', content: '', timestamp: new Date().toLocaleTimeString('es-PE', { hour: '2-digit', minute: '2-digit' }) }
+      setMessages(prev => [...prev, assistantMessage])
+
+      for (let i = 0; i < fullText.length; i++) {
+        await new Promise(r => setTimeout(r, 15))
+        displayedText += fullText[i]
+        setMessages(prev => {
+          const newMessages = [...prev]
+          newMessages[newMessages.length - 1] = { ...assistantMessage, content: displayedText }
+          return newMessages
+        })
+      }
+    } catch (err) {
+      if (err instanceof Error && err.message === 'rate_limit') {
+        setError('Femi está muy solicitada ahora mismo ⏳ Intenta en 30 segundos')
+      } else {
+        setError('Femi está descansando un momento ☕ Intenta en unos segundos.')
+      }
     } finally {
       setIsLoading(false)
     }
   }
 
+  const userName = state.user?.name || 'amiga'
+
   return (
     <>
       {/* Floating Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={handleChatButtonClick}
         className="fixed bottom-6 right-6 z-50 w-[62px] h-[62px] rounded-full flex items-center justify-center text-2xl text-white shadow-lg transition-all hover:scale-110 gradient-signature"
         style={{ border: '3px solid white' }}
         aria-label={isOpen ? 'Cerrar chat' : 'Abrir chat'}
@@ -1627,7 +2874,7 @@ function AIChatWidget() {
       </button>
 
       {/* Chat Panel */}
-      {isOpen && (
+      {isOpen && state.isAuthenticated && (
         <div className="fixed bottom-24 right-6 z-50 w-[370px] h-[530px] rounded-[28px] overflow-hidden shadow-2xl flex flex-col bg-white animate-slideIn">
           {/* Header */}
           <div className="p-4 flex items-center gap-3 gradient-signature">
@@ -1635,12 +2882,18 @@ function AIChatWidget() {
               🤖
             </div>
             <div className="flex-1">
-              <div className="font-bold text-white">Asistente FinFémina</div>
+              <div className="font-bold text-white">Femi</div>
               <div className="flex items-center gap-1 text-white/80 text-sm">
                 <span className="w-2 h-2 rounded-full bg-[#2DBD96] animate-blink" />
                 En línea 24/7
               </div>
             </div>
+            <button
+              onClick={clearChat}
+              className="px-3 py-1.5 rounded-lg border border-white/30 text-white/80 text-xs font-medium hover:bg-white/10"
+            >
+              🗑️ Limpiar
+            </button>
           </div>
 
           {/* Messages */}
@@ -1648,7 +2901,7 @@ function AIChatWidget() {
             {messages.length === 0 && (
               <div className="space-y-3">
                 <p className="text-[#6B3F5E] text-sm text-center mb-4">
-                  ¡Hola! Soy tu asistente financiera. ¿En qué puedo ayudarte? 💜
+                  ¡Hola, {userName}! 💜 Soy Femi, tu asistente financiera personal. ¿En qué te ayudo hoy?
                 </p>
                 <div className="flex flex-wrap gap-2">
                   {suggestions.map((sug, i) => (
@@ -1666,14 +2919,21 @@ function AIChatWidget() {
 
             {messages.map((msg, i) => (
               <div key={i} className={`flex ${msg.role === 'user' ? 'justify-end' : 'justify-start'}`}>
-                <div 
-                  className={`max-w-[80%] p-3 rounded-2xl text-sm ${
-                    msg.role === 'user' 
-                      ? 'text-white rounded-br-sm gradient-signature' 
-                      : 'bg-[#FDFAF8] text-[#1C0E1A] rounded-bl-sm'
-                  }`}
-                >
-                  {msg.content}
+                <div className="flex flex-col">
+                  <div 
+                    className={`max-w-[80%] p-3 rounded-2xl text-sm ${
+                      msg.role === 'user' 
+                        ? 'text-white rounded-br-sm gradient-signature' 
+                        : 'bg-[#FDFAF8] text-[#1C0E1A] rounded-bl-sm'
+                    }`}
+                  >
+                    {msg.content}
+                  </div>
+                  {msg.timestamp && (
+                    <span className={`text-xs text-[#B08DA8] mt-1 ${msg.role === 'user' ? 'text-right' : 'text-left'}`}>
+                      {msg.timestamp}
+                    </span>
+                  )}
                 </div>
               </div>
             ))}
@@ -1687,20 +2947,37 @@ function AIChatWidget() {
                 </div>
               </div>
             )}
+
+            {error && (
+              <div className="p-3 rounded-xl bg-[#FEF0E4] border border-[#F4A261] text-sm text-[#1C0E1A]">
+                {error}
+                <button 
+                  onClick={() => setError(null)}
+                  className="block mt-2 text-[#D63F74] font-bold text-xs"
+                >
+                  Reintentar
+                </button>
+              </div>
+            )}
             <div ref={messagesEndRef} />
           </div>
 
           {/* Input */}
           <div className="p-4 border-t border-[#EDD9EA]">
             <div className="flex gap-2">
-              <input
-                type="text"
-                value={input}
-                onChange={(e) => setInput(e.target.value)}
-                onKeyPress={(e) => e.key === 'Enter' && sendMessage(input)}
-                placeholder="Escribe tu pregunta..."
-                className="flex-1 p-3 rounded-xl bg-[#FDFAF8] border-2 border-[#EDD9EA] text-[#1C0E1A] text-sm"
-              />
+              <div className="flex-1 relative">
+                <input
+                  type="text"
+                  value={input}
+                  onChange={(e) => setInput(e.target.value.slice(0, maxChars))}
+                  onKeyPress={(e) => e.key === 'Enter' && sendMessage(input)}
+                  placeholder="Escribe tu pregunta..."
+                  className="w-full p-3 pr-16 rounded-xl bg-[#FDFAF8] border-2 border-[#EDD9EA] text-[#1C0E1A] text-sm"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs text-[#B08DA8]">
+                  {input.length}/{maxChars}
+                </span>
+              </div>
               <button
                 onClick={() => sendMessage(input)}
                 disabled={!input.trim() || isLoading}
@@ -1775,25 +3052,91 @@ function Footer() {
 }
 
 // ============ MAIN APP ============
-export default function FinFeminaApp() {
+function AppContent() {
   const [activeTab, setActiveTab] = useState<Tab>('inicio')
-  const [points, setPoints] = useState(1240)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+  const [authModalTab, setAuthModalTab] = useState<'register' | 'login'>('register')
+  const [tourStep, setTourStep] = useState<number | null>(null)
+  const [pointsAnimations, setPointsAnimations] = useState<PointsAnimation[]>([])
+  const { state, updatePoints } = useAuth()
+
+  const openAuthModal = (tab: 'register' | 'login' = 'register') => {
+    setAuthModalTab(tab)
+    setAuthModalOpen(true)
+  }
+
+  const handleEarnPoints = (amount: number, x: number, y: number) => {
+    if (!state.user) return
+    
+    // Add animation
+    const id = Date.now().toString()
+    setPointsAnimations(prev => [...prev, { id, amount, x, y }])
+    
+    // Update points
+    updatePoints(state.user.points + amount)
+  }
+
+  const removePointsAnimation = (id: string) => {
+    setPointsAnimations(prev => prev.filter(a => a.id !== id))
+  }
 
   return (
     <main className="relative min-h-screen">
       <BackgroundBlobs />
-      <Navigation activeTab={activeTab} setActiveTab={setActiveTab} />
+      <Navigation 
+        activeTab={activeTab} 
+        setActiveTab={setActiveTab} 
+        onAuthClick={() => openAuthModal('register')}
+      />
       
       <div className="relative z-10">
-        {activeTab === 'inicio' && <InicioPage />}
-        {activeTab === 'aprende' && <AprendePage points={points} setPoints={setPoints} />}
-        {activeTab === 'tracker' && <TrackerPage />}
+        {activeTab === 'inicio' && <InicioPage onAuthClick={() => openAuthModal('register')} setActiveTab={setActiveTab} />}
+        {activeTab === 'aprende' && (
+          <AprendePage 
+            onAuthClick={() => openAuthModal('register')} 
+            onEarnPoints={handleEarnPoints}
+          />
+        )}
+        {activeTab === 'tracker' && <TrackerPage onAuthClick={() => openAuthModal('register')} />}
         {activeTab === 'comparar' && <CompararPage />}
-        {activeTab === 'logros' && <LogrosPage points={points} />}
+        {activeTab === 'logros' && <LogrosPage onAuthClick={() => openAuthModal('register')} />}
       </div>
       
       <Footer />
-      <AIChatWidget />
+      <AIChatWidget onAuthClick={() => openAuthModal('register')} activeTab={activeTab} />
+      
+      <AuthModal 
+        isOpen={authModalOpen} 
+        onClose={() => setAuthModalOpen(false)} 
+        defaultTab={authModalTab}
+      />
+
+      {tourStep !== null && (
+        <TourOverlay 
+          step={tourStep} 
+          onNext={() => {
+            if (tourStep < 4) {
+              setTourStep(tourStep + 1)
+            } else {
+              setTourStep(null)
+            }
+          }}
+          onSkip={() => setTourStep(null)}
+        />
+      )}
+
+      <ToastContainer />
+      <PointsAnimationOverlay animations={pointsAnimations} onComplete={removePointsAnimation} />
     </main>
+  )
+}
+
+export default function FinFeminaApp() {
+  return (
+    <AuthProvider>
+      <ToastProvider>
+        <AppContent />
+      </ToastProvider>
+    </AuthProvider>
   )
 }
