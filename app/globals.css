@@ -4,49 +4,51 @@
 @custom-variant dark (&:is(.dark *));
 
 :root {
-  /* FinFémina Design System */
-  --rose: #E8436A;
-  --rose-light: #FEE7ED;
-  --peach: #FF8C5A;
-  --peach-light: #FFEEE6;
-  --amber: #F5A623;
-  --amber-light: #FEF3DB;
-  --mint: #1DB985;
-  --mint-light: #E6F9F2;
-  --sky: #4A90D9;
-  --sky-light: #E6F0FA;
-  --lavender: #8B5CF6;
-  --lavender-light: #F0EBFE;
-  --cream: #FEF6F0;
-  --ink: #1A0A0E;
-  --muted-text: #9E7A82;
-  --border-color: #F0DCE4;
+  /* FinFémina Design System - Feminine Empowerment */
+  --background: #FDFAF8;
+  --surface: #FFFFFF;
+  --rose: #D63F74;
+  --rose-soft: #F2789F;
+  --rose-light: #FDE8F0;
+  --lilac: #9B72CF;
+  --lilac-soft: #C4A8E8;
+  --lilac-light: #F0E8FD;
+  --peach: #F4A261;
+  --peach-light: #FEF0E4;
+  --sage: #2DBD96;
+  --sage-light: #E4F7F1;
+  --sky: #5B9BD5;
+  --sky-light: #EAF3FB;
+  --ink: #1C0E1A;
+  --ink-medium: #6B3F5E;
+  --ink-light: #B08DA8;
+  --border-color: #EDD9EA;
+  --shadow-color: rgba(214, 63, 116, 0.09);
   
-  --background: #FEF6F0;
-  --foreground: #1A0A0E;
+  --foreground: #1C0E1A;
   --card: #FFFFFF;
-  --card-foreground: #1A0A0E;
+  --card-foreground: #1C0E1A;
   --popover: #FFFFFF;
-  --popover-foreground: #1A0A0E;
-  --primary: #E8436A;
+  --popover-foreground: #1C0E1A;
+  --primary: #D63F74;
   --primary-foreground: #FFFFFF;
-  --secondary: #FF8C5A;
+  --secondary: #9B72CF;
   --secondary-foreground: #FFFFFF;
-  --muted: #FEF6F0;
-  --muted-foreground: #9E7A82;
-  --accent: #F5A623;
-  --accent-foreground: #1A0A0E;
-  --destructive: #E8436A;
+  --muted: #FDFAF8;
+  --muted-foreground: #6B3F5E;
+  --accent: #F4A261;
+  --accent-foreground: #1C0E1A;
+  --destructive: #D63F74;
   --destructive-foreground: #FFFFFF;
-  --border: #F0DCE4;
-  --input: #FEF6F0;
-  --ring: #E8436A;
-  --radius: 0.875rem;
+  --border: #EDD9EA;
+  --input: #FDFAF8;
+  --ring: #9B72CF;
+  --radius: 1rem;
 }
 
 @theme inline {
-  --font-sans: var(--font-nunito), 'Nunito', system-ui, sans-serif;
-  --font-serif: var(--font-playfair), 'Playfair Display', Georgia, serif;
+  --font-sans: var(--font-plus-jakarta), 'Plus Jakarta Sans', system-ui, sans-serif;
+  --font-serif: var(--font-fraunces), 'Fraunces', Georgia, serif;
   --font-mono: 'Geist Mono', monospace;
   --color-background: var(--background);
   --color-foreground: var(--foreground);
@@ -90,7 +92,7 @@
     transform: translateY(0) rotate(0deg);
   }
   50% {
-    transform: translateY(-20px) rotate(3deg);
+    transform: translateY(-20px) rotate(2deg);
   }
 }
 
@@ -100,17 +102,8 @@
     opacity: 1;
   }
   50% {
-    transform: scale(1.05);
-    opacity: 0.9;
-  }
-}
-
-@keyframes bounce-dots {
-  0%, 80%, 100% {
-    transform: scale(0);
-  }
-  40% {
-    transform: scale(1);
+    transform: scale(1.03);
+    opacity: 0.95;
   }
 }
 
@@ -160,12 +153,43 @@
   }
 }
 
+@keyframes draw-line {
+  from {
+    stroke-dashoffset: 1000;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes scale-out {
+  from {
+    opacity: 1;
+    transform: scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: scale(0.9);
+  }
+}
+
 .animate-fadeUp {
   animation: fadeUp 0.6s ease-out forwards;
 }
 
 .animate-float {
-  animation: float 6s ease-in-out infinite;
+  animation: float 8s ease-in-out infinite;
 }
 
 .animate-pulse-soft {
@@ -188,53 +212,83 @@
   animation: blob-morph 8s ease-in-out infinite, float 10s ease-in-out infinite;
 }
 
+.animate-scale-in {
+  animation: scale-in 0.3s ease-out forwards;
+}
+
+.animate-scale-out {
+  animation: scale-out 0.3s ease-out forwards;
+}
+
+.animate-draw-line {
+  stroke-dasharray: 1000;
+  stroke-dashoffset: 1000;
+  animation: draw-line 1.5s ease-out forwards;
+}
+
 .animation-delay-100 { animation-delay: 100ms; }
 .animation-delay-200 { animation-delay: 200ms; }
 .animation-delay-300 { animation-delay: 300ms; }
 .animation-delay-400 { animation-delay: 400ms; }
 .animation-delay-500 { animation-delay: 500ms; }
 
-/* Gradient Text */
-.gradient-text {
-  background: linear-gradient(135deg, #E8436A 0%, #FF8C5A 50%, #F5A623 100%);
+/* Signature Gradient - Rose to Lilac */
+.gradient-signature {
+  background: linear-gradient(135deg, #D63F74 0%, #9B72CF 100%);
+}
+
+.gradient-signature-text {
+  background: linear-gradient(135deg, #D63F74 0%, #9B72CF 100%);
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
 }
 
+/* Warm Gradient - Rose to Peach */
+.gradient-warm {
+  background: linear-gradient(135deg, #D63F74 0%, #F4A261 100%);
+}
+
+/* Pastel Background Gradient */
+.gradient-pastel {
+  background: linear-gradient(135deg, #FDE8F0 0%, #F0E8FD 100%);
+}
+
 /* Primary Gradient Button */
 .btn-gradient {
-  background: linear-gradient(135deg, #E8436A 0%, #FF8C5A 100%);
+  background: linear-gradient(135deg, #D63F74 0%, #9B72CF 100%);
   color: white;
   border-radius: 16px;
-  font-weight: 700;
+  font-weight: 800;
   transition: all 0.3s ease;
+  box-shadow: 0 8px 28px rgba(214, 63, 116, 0.25);
 }
 
 .btn-gradient:hover {
   transform: translateY(-2px);
-  box-shadow: 0 8px 24px rgba(232, 67, 106, 0.35);
+  box-shadow: 0 12px 36px rgba(214, 63, 116, 0.35);
 }
 
 /* Card Styles */
 .card-finfemina {
   background: white;
-  border-radius: 24px;
-  border: 1.5px solid #F0DCE4;
-  box-shadow: 0 4px 24px rgba(232, 67, 106, 0.10);
+  border-radius: 28px;
+  border: 1.5px solid #EDD9EA;
+  box-shadow: 0 4px 28px rgba(214, 63, 116, 0.07);
   transition: all 0.3s ease;
 }
 
 .card-finfemina:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 12px 32px rgba(232, 67, 106, 0.18);
+  transform: translateY(-5px);
+  box-shadow: 0 12px 40px rgba(214, 63, 116, 0.14);
 }
 
 /* Glassmorphism Navbar */
 .glass-nav {
-  background: rgba(255, 255, 255, 0.85);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
+  background: rgba(253, 250, 248, 0.88);
+  backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
+  border-bottom: 1.5px solid #EDD9EA;
 }
 
 /* Custom Scrollbar */
@@ -244,7 +298,7 @@
 }
 
 ::-webkit-scrollbar-track {
-  background: var(--cream);
+  background: var(--background);
 }
 
 ::-webkit-scrollbar-thumb {
@@ -253,7 +307,14 @@
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: var(--rose);
+  background: var(--rose-soft);
+}
+
+/* Focus States */
+input:focus, select:focus, textarea:focus {
+  border-color: #9B72CF;
+  box-shadow: 0 0 0 3px rgba(155, 114, 207, 0.15);
+  outline: none;
 }
 
 @layer base {

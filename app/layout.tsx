@@ -1,19 +1,19 @@
 import type { Metadata, Viewport } from 'next'
-import { Playfair_Display, Nunito } from 'next/font/google'
+import { Fraunces, Plus_Jakarta_Sans } from 'next/font/google'
 import { Analytics } from '@vercel/analytics/next'
 import './globals.css'
 
-const playfair = Playfair_Display({ 
+const fraunces = Fraunces({ 
   subsets: ["latin"],
   weight: ['400', '500', '600', '700', '800', '900'],
-  variable: '--font-playfair',
+  variable: '--font-fraunces',
   display: 'swap',
 })
 
-const nunito = Nunito({ 
+const plusJakarta = Plus_Jakarta_Sans({ 
   subsets: ["latin"],
   weight: ['400', '500', '600', '700', '800'],
-  variable: '--font-nunito',
+  variable: '--font-plus-jakarta',
   display: 'swap',
 })
 
@@ -41,7 +41,7 @@ export const metadata: Metadata = {
 }
 
 export const viewport: Viewport = {
-  themeColor: '#E8436A',
+  themeColor: '#D63F74',
   width: 'device-width',
   initialScale: 1,
 }
@@ -53,7 +53,7 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="es">
-      <body className={`${playfair.variable} ${nunito.variable} font-sans antialiased`}>
+      <body className={`${fraunces.variable} ${plusJakarta.variable} font-sans antialiased`}>
         {children}
         <Analytics />
       </body>
